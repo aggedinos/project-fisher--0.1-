@@ -1,21 +1,91 @@
-MIT License
+Project Fisher Proprietary License
 
-Copyright (c) 2026 aggedinos
+Copyright (c) 2026 Project Fisher. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+TERMS AND CONDITIONS
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. DEFINITIONS
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+   "Software" refers to Project Fisher and all associated source code, object
+   code, documentation, configuration files, assets, and any other files
+   included in this repository.
+
+   "Licensor" refers to the copyright holder(s) of Project Fisher.
+
+   "You" (or "Your") refers to any individual or entity exercising permissions
+   granted by this License.
+
+2. GRANT OF LICENSE
+
+   Subject to the terms and conditions of this License, the Licensor hereby
+   grants You a limited, non-exclusive, non-transferable, revocable license
+   to USE the Software solely for personal, non-commercial purposes.
+
+3. RESTRICTIONS
+
+   You may NOT, without the prior written permission of the Licensor:
+
+   a. MODIFY, adapt, alter, translate, or create derivative works based on
+      the Software, in whole or in part.
+
+   b. COPY, reproduce, duplicate, or otherwise replicate any files, source
+      code, or other materials included in the Software, except as
+      automatically and temporarily required for the ordinary use of the
+      Software on a single device.
+
+   c. DISTRIBUTE, sublicense, lease, lend, sell, resell, publish, or
+      otherwise make the Software available to any third party, in whole
+      or in part, whether in original or modified form.
+
+   d. USE the Software for any commercial purpose, including but not limited
+      to selling products or services that incorporate or rely on the
+      Software.
+
+   e. REVERSE ENGINEER, decompile, or disassemble the Software, except to
+      the extent that such activity is expressly permitted by applicable law
+      notwithstanding this limitation.
+
+   f. REMOVE or alter any copyright notices, trademarks, or other
+      proprietary markings contained in the Software.
+
+4. COMMERCIAL LICENSING
+
+   Any commercial use of the Software requires a separate written license
+   agreement with the Licensor. Contact the Licensor to obtain a commercial
+   license.
+
+5. OWNERSHIP
+
+   The Software is and shall remain the exclusive property of the Licensor.
+   This License does not grant You any ownership rights in the Software.
+   All rights not expressly granted herein are reserved by the Licensor.
+
+6. DISCLAIMER OF WARRANTY
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. THE LICENSOR MAKES
+   NO WARRANTY THAT THE SOFTWARE WILL BE ERROR-FREE OR UNINTERRUPTED.
+
+7. LIMITATION OF LIABILITY
+
+   IN NO EVENT SHALL THE LICENSOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING BUT
+   NOT LIMITED TO PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES, LOSS OF USE,
+   DATA, OR PROFITS, OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+   THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+   THE SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+8. TERMINATION
+
+   This License is effective until terminated. Your rights under this License
+   will terminate automatically without notice if You fail to comply with any
+   of its terms. Upon termination, You must immediately cease all use of the
+   Software and destroy all copies in Your possession.
+
+9. GOVERNING LAW
+
+   This License shall be governed by and construed in accordance with the laws
+   of the jurisdiction in which the Licensor resides, without regard to its
+   conflict of law provisions.
