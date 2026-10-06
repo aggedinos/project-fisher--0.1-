@@ -41,7 +41,7 @@ class Settings(BaseModel):
 
     model_config = ConfigDict(validate_assignment=True, extra="forbid")
 
-    provider: Literal["gemini", "ollama", "nvidia"] = "gemini"
+    provider: Literal["gemini", "ollama", "nvidia"] = "ollama"
     model: str = ""
     gemini_api_key: SecretStr = Field(default_factory=lambda: SecretStr(""), repr=False)
     nvidia_api_key: SecretStr = Field(default_factory=lambda: SecretStr(""), repr=False)

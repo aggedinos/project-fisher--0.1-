@@ -79,8 +79,8 @@ export interface SessionDetails extends SessionSummary {
 }
 
 export const defaultSettings: Settings = {
-  provider: 'gemini',
-  model: '',
+  provider: 'ollama',
+  model: 'llama3.2-vision',
   permission_mode: 'safe',
   profile: 'temporary',
   headless: false,

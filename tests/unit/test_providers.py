@@ -61,6 +61,20 @@ class ParsingTests(unittest.TestCase):
 
 
 class SettingsTests(unittest.TestCase):
+    def test_account_free_defaults_and_local_settings_file(self) -> None:
+        with tempfile.TemporaryDirectory() as folder:
+            settings = Settings(data_dir=Path(folder))
+            self.assertEqual(settings.provider, "ollama")
+            self.assertEqual(settings.model, "llama3.2-vision")
+            self.assertEqual(settings.api_key_for_provider(), "")
+            app = FisherApplication(settings)
+            self.assertFalse((Path(folder) / "settings.json").exists())
+            app.update_settings({"permission_mode": "supervised"})
+            saved = json.loads((Path(folder) / "settings.json").read_text(encoding="utf-8"))
+            self.assertEqual(saved["provider"], "ollama")
+            self.assertEqual(saved["permission_mode"], "supervised")
+            self.assertNotIn("api_key", json.dumps(saved).lower())
+
     def test_env_precedence_no_file_creation_and_redaction(self) -> None:
         with tempfile.TemporaryDirectory() as folder:
             env_file = Path(folder) / ".env"

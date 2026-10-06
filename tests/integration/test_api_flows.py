@@ -331,6 +331,7 @@ class ApiFlowTests(IsolatedAsyncioTestCase):
                 page = await browser.new_page()
                 await page.goto(str(self.client.base_url), wait_until="networkidle")
                 await page.get_by_role("heading", name="Control center.").wait_for()
+                self.assertIn("Ollama", await page.locator(".composer-model").inner_text())
                 await page.get_by_role("textbox", name="Task", exact=True).fill("Wait until stopped")
                 await page.get_by_role("textbox", name="Starting URL").fill(
                     f"{self.site_url}/product.html"
@@ -378,6 +379,7 @@ class ApiFlowTests(IsolatedAsyncioTestCase):
                 await page.goto(str(self.client.base_url), wait_until="networkidle")
                 await page.locator(".topbar-settings").click()
                 dialog = page.get_by_role("dialog", name="Agent settings")
+                self.assertIn("Saved on this device", await dialog.inner_text())
                 await dialog.locator(".provider-card").filter(has_text="Ollama").click()
                 await dialog.get_by_role("button", name="Supervised").click()
                 await dialog.get_by_label("Profile").select_option("persistent")

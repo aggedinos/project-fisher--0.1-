@@ -171,7 +171,7 @@ function SettingsDialog({
   return <div className="modal-backdrop" onMouseDown={(event: { target: EventTarget; currentTarget: EventTarget }) => { if (event.target === event.currentTarget) onClose(); }}>
     <section className="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title">
       <header className="dialog-header">
-        <div><span className="eyebrow">PREFERENCES</span><h2 id="settings-title">Agent settings</h2></div>
+        <div><span className="eyebrow">PREFERENCES</span><h2 id="settings-title">Agent settings</h2><p className="field-help">Saved on this device. No Fisher account is needed.</p></div>
         <button className="icon-button" onClick={onClose} aria-label="Close settings"><X size={18} /></button>
       </header>
       <div className="dialog-body">
@@ -184,7 +184,7 @@ function SettingsDialog({
               onClick={() => patch({ provider: provider.name, model: provider.models[0] ?? '' })}
             >
               <span>{providerLabels[provider.name] ?? provider.name}</span>
-              <small className={provider.configured ? 'available' : 'unavailable'}>{provider.configured ? 'Ready' : 'Needs setup'}</small>
+              <small className={provider.configured ? 'available' : 'unavailable'}>{provider.name === 'ollama' ? 'Local · no account' : provider.configured ? 'API key configured' : 'API key needed'}</small>
             </button>)}
           </div>
           <label className="field-label" htmlFor="model-input">Model</label>

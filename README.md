@@ -1,6 +1,6 @@
 # Project Fisher 0.2
 
-Project Fisher is a local browser agent. Give it a task, choose Gemini, Ollama, or NVIDIA, and watch it inspect pages and operate Playwright browser tools. Its React control center shows the plan, current action, browser preview, permission requests, and recorded sessions. The same agent runs from the CLI.
+Project Fisher is a local browser agent with no Fisher account or sign-in page. Give it a task and watch it inspect pages and operate Playwright browser tools. Its React control center shows the plan, current action, browser preview, permission requests, and recorded sessions. The same agent runs from the CLI. Ollama is the default provider; Gemini and NVIDIA remain optional.
 
 Fisher treats page text as untrusted data. A model selects a named, typed tool; Fisher validates its arguments and permissions, executes it, and checks whether the page changed. It stops after bounded retries and reports blocked or partial work instead of looping indefinitely.
 
@@ -9,7 +9,7 @@ Fisher treats page text as untrusted data. A model selects a named, typed tool; 
 - Python 3.11 or newer
 - Node.js 20.19 or newer on the 20.x line, or 22.12 or newer, for building the UI
 - Chromium installed through Playwright, or a compatible local Chromium executable
-- A Gemini or NVIDIA API key for those cloud providers; Ollama needs a running local server instead
+- A running local Ollama server and model for the default account-free setup; Gemini or NVIDIA API keys only if you choose those optional providers
 - A graphical desktop for the native PyWebview window. The local web control center also works in a browser.
 
 ## Install
@@ -37,12 +37,12 @@ npm run build
 
 If Playwright's Chromium download is unavailable but Chromium is installed locally, set `FISHER_EXECUTABLE_PATH` or pass `--browser-executable` to the CLI. Use a Chromium version compatible with the installed Playwright release.
 
-Copy [`.env.example`](.env.example) to an untracked `.env`, then set the key for the provider you use. Process environment variables take precedence over `.env` and saved control center settings. Fisher never creates or writes a credentials file.
+Settings are saved only on this device in the per-user data directory (`settings.json`); no Fisher account or remote settings service is involved. Ollama requires no API key. To use an optional cloud provider, copy [`.env.example`](.env.example) to an untracked `.env` and set its key locally. Process environment variables take precedence over `.env` and saved control center settings. Fisher never creates or writes a credentials file.
 
 ```dotenv
 GEMINI_API_KEY=your-local-key
 # Or use NVIDIA_API_KEY=...
-# Or select FISHER_PROVIDER=ollama with no API key
+# Ollama remains the default when no key is set
 ```
 
 The example above is a template; keep real keys out of version control. The runtime keeps sessions, settings, and its own persistent browser profile in a per-user data directory. Override it with `FISHER_DATA_DIR` if needed.
@@ -60,8 +60,8 @@ Enter a task and optional starting URL, then choose Run. The right panel shows t
 ## CLI
 
 ```bash
+python main.py "Summarize this page" --url https://example.com
 python main.py "Find the Python documentation" --provider gemini --url https://www.python.org
-python main.py "Summarize this page" --provider ollama --model llama3.2-vision --url https://example.com
 python main.py "Inspect this page" --provider nvidia --permission-mode supervised --headed
 ```
 
