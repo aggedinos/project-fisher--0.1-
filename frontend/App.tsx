@@ -187,6 +187,8 @@ function SettingsDialog({
               <small className={provider.configured ? 'available' : 'unavailable'}>{provider.name === 'ollama' ? 'Local · no account' : provider.configured ? 'API key configured' : 'API key needed'}</small>
             </button>)}
           </div>
+          {draft.provider === 'ollama' ? <p className="field-help">Ollama must be running on this computer with the selected model installed.</p>
+            : selectedProvider && !selectedProvider.configured ? <p className="field-help">Add {draft.provider === 'nvidia' ? 'NVIDIA_API_KEY' : 'GEMINI_API_KEY'} to the local .env file, then restart Fisher. The key stays on this device.</p> : null}
           <label className="field-label" htmlFor="model-input">Model</label>
           <input id="model-input" className="text-input" value={draft.model} list="provider-models"
             onChange={(event: { target: HTMLInputElement }) => patch({ model: event.target.value })} placeholder="Provider default" />
@@ -408,6 +410,8 @@ export default function App() {
       setPermission(null); setAnswer(''); setFrameUrl(''); setView('monitor');
       setConnected(true);
     } catch (cause) {
+      setRunState('error'); setStatusText('Task failed'); setFrameUrl(''); setObservation(null);
+      setActiveTaskId(null);
       setError(cause instanceof Error ? cause.message : 'Could not start task');
     }
   };
@@ -486,8 +490,8 @@ export default function App() {
               <div className={`browser-viewport ${frameUrl ? 'has-frame' : ''}`}>
                 {frameUrl ? <img src={frameUrl} alt="Current browser page" /> : <div className="browser-placeholder">
                   <div className="preview-glow" /><div className="preview-icon"><Compass size={41} strokeWidth={1.2} /></div>
-                  <h2>{isRunning ? 'Opening browser view' : 'Your browser, in view'}</h2>
-                  <p>{isRunning ? 'The first frame will appear once the page is ready.' : 'Start a task to watch Fisher navigate in real time.'}</p>
+                  <h2>{runState === 'error' ? 'Task failed' : isRunning ? 'Opening browser view' : 'Your browser, in view'}</h2>
+                  <p>{runState === 'error' ? error || 'Check the provider settings and try again.' : isRunning ? 'The first frame will appear once the page is ready.' : 'Start a task to watch Fisher navigate in real time.'}</p>
                 </div>}
               </div>
               <div className="browser-footer"><span><span className={`footer-status-dot ${isRunning ? 'active' : ''}`} />{statusText}</span><span>{observation?.title || 'No active page'}</span></div>
