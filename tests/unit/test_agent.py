@@ -24,39 +24,48 @@ from fisher.models import (
 class VerificationTests(unittest.TestCase):
     def test_transient_element_ids_do_not_count_as_progress(self) -> None:
         before = Observation(
-            url="https://example.com", text="Shop", fingerprint="same",
+            url="https://example.com",
+            text="Shop",
+            fingerprint="same",
             elements=[ElementInfo(id="o1-e1", role="button", name="Search")],
         )
         after = before.model_copy(deep=True)
         after.elements[0].id = "o2-e1"
         verified, evidence = verify_change(
             ToolCall(name="click_element", arguments={"element_id": "o1-e1"}),
-            before, after,
+            before,
+            after,
         )
         self.assertFalse(verified)
         self.assertIn("no observable page change", evidence[0])
 
     def test_filled_value_is_observable(self) -> None:
         before = Observation(
-            url="https://example.com", fingerprint="before",
+            url="https://example.com",
+            fingerprint="before",
             elements=[ElementInfo(id="o1-e1", role="textbox", name="Search", value="")],
         )
         after = Observation(
-            url="https://example.com", fingerprint="after",
+            url="https://example.com",
+            fingerprint="after",
             elements=[ElementInfo(id="o2-e1", role="textbox", name="Search", value="headphones")],
         )
         verified, evidence = verify_change(
             ToolCall(name="fill_element", arguments={"element_id": "o1-e1", "text": "headphones"}),
-            before, after,
+            before,
+            after,
         )
         self.assertTrue(verified)
         self.assertIn("interactive element state changed", evidence)
 
     def test_plan_advances_only_explicit_step_ids(self) -> None:
-        plan = TaskPlan(goal="Find a price", steps=[
-            PlanStep(id="search", description="Search"),
-            PlanStep(id="report", description="Report price"),
-        ])
+        plan = TaskPlan(
+            goal="Find a price",
+            steps=[
+                PlanStep(id="search", description="Search"),
+                PlanStep(id="report", description="Report price"),
+            ],
+        )
         self.assertEqual(Planner.mark_completed(plan, ["not-a-step"]), [])
         self.assertEqual(plan.current_step, 0)
         self.assertEqual(Planner.mark_completed(plan, ["search"]), ["search"])
@@ -104,13 +113,18 @@ class _Registry:
         before = await self.browser.observe()
         if call.name == "navigate":
             self.browser.current = Observation(
-                url=str(call.arguments["url"]), title="Product", text="Headphones cost $49",
+                url=str(call.arguments["url"]),
+                title="Product",
+                text="Headphones cost $49",
                 fingerprint="product",
             )
         after = await self.browser.observe()
         return ToolResult(
-            call=call, success=True, changed=call.name == "navigate",
-            before_state=before, after_state=after,
+            call=call,
+            success=True,
+            changed=call.name == "navigate",
+            before_state=before,
+            after_state=after,
         )
 
 
@@ -123,13 +137,18 @@ class _Provider:
     async def plan(self, task: str, _observation: Observation) -> TaskPlan:
         return TaskPlan(goal=task, steps=[PlanStep(id="read", description="Read product")])
 
-    async def decide(self, _task: str, _plan: TaskPlan, _observation: Observation,
-                     _memory: str, _tools: list[ToolSpec], image: bytes | None = None) -> ModelDecision:
+    async def decide(
+        self,
+        _task: str,
+        _plan: TaskPlan,
+        _observation: Observation,
+        _memory: str,
+        _tools: list[ToolSpec],
+        image: bytes | None = None,
+    ) -> ModelDecision:
         self.decisions += 1
         if self.decisions == 1:
-            return ModelDecision(
-                tool_call=ToolCall(name="read_page"), completed_step_ids=["read"]
-            )
+            return ModelDecision(tool_call=ToolCall(name="read_page"), completed_step_ids=["read"])
         return ModelDecision(answer="The headphones cost $49.", facts=["Price: $49"])
 
 
@@ -139,10 +158,15 @@ class OrchestratorTests(unittest.IsolatedAsyncioTestCase):
         registry = _Registry(browser)
         events = []
         agent = AgentOrchestrator(
-            _Provider(), browser=browser, registry=registry, on_event=events.append,
+            _Provider(),
+            browser=browser,
+            registry=registry,
+            on_event=events.append,
             max_steps=4,
         )
-        result = await agent.run("Report the price", "https://example.com/product", task_id="case-1")
+        result = await agent.run(
+            "Report the price", "https://example.com/product", task_id="case-1"
+        )
         self.assertEqual(result.status, "completed")
         self.assertEqual(result.answer, "The headphones cost $49.")
         self.assertEqual([call.name for call in registry.calls], ["navigate", "read_page"])
@@ -164,7 +188,9 @@ class OrchestratorTests(unittest.IsolatedAsyncioTestCase):
         browser = _Browser()
         events = []
         agent = AgentOrchestrator(
-            WaitingProvider(), browser=browser, registry=_Registry(browser),
+            WaitingProvider(),
+            browser=browser,
+            registry=_Registry(browser),
             on_event=events.append,
         )
         task = asyncio.create_task(agent.run("Wait", "https://example.com/product"))

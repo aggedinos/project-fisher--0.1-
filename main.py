@@ -27,16 +27,16 @@ def parser() -> argparse.ArgumentParser:
     command.add_argument("--url", default="https://duckduckgo.com", help="Starting HTTP(S) URL")
     command.add_argument("--provider", choices=("gemini", "ollama", "nvidia"))
     command.add_argument("--model", help="Model name for the selected provider")
-    command.add_argument(
-        "--permission-mode", choices=tuple(mode.value for mode in PermissionMode)
-    )
+    command.add_argument("--permission-mode", choices=tuple(mode.value for mode in PermissionMode))
     command.add_argument("--profile", choices=("temporary", "persistent"))
     display = command.add_mutually_exclusive_group()
     display.add_argument("--headless", dest="headless", action="store_true")
     display.add_argument("--headed", dest="headless", action="store_false")
     command.set_defaults(headless=None)
     command.add_argument("--browser-executable", help="Optional Chromium executable path")
-    command.add_argument("--serve", action="store_true", help="Serve the web control center locally")
+    command.add_argument(
+        "--serve", action="store_true", help="Serve the web control center locally"
+    )
     command.add_argument("--gui", action="store_true", help="Open the desktop control center")
     command.add_argument("--port", type=int, default=8000, help="Local GUI port (default: 8000)")
     command.add_argument("--replay", metavar="SESSION_ID", help="Read-only session replay")
@@ -89,7 +89,9 @@ async def _run_cli(args: argparse.Namespace) -> int:
         print("Stopped")
         return 130
     except Exception as exc:
-        message = str(exc) if isinstance(exc, ProviderError) else f"Task failed ({type(exc).__name__})"
+        message = (
+            str(exc) if isinstance(exc, ProviderError) else f"Task failed ({type(exc).__name__})"
+        )
         print(f"Could not run task: {message}")
         return 1
     if result.answer:

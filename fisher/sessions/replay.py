@@ -50,7 +50,15 @@ def list_sessions(root: str | Path) -> list[dict[str, Any]]:
         summaries.append(
             {
                 key: payload.get(key)
-                for key in ("id", "task", "provider", "started_at", "finished_at", "status", "answer")
+                for key in (
+                    "id",
+                    "task",
+                    "provider",
+                    "started_at",
+                    "finished_at",
+                    "status",
+                    "answer",
+                )
             }
             | {"step_count": len(payload.get("steps", []))}
         )

@@ -51,12 +51,12 @@ class Planner:
             plan = await self.provider.plan(task, observation)
             return _normalize(plan, task, 1)
         except Exception as exc:
-            logger.warning("Could not create model plan (%s); using a short fallback", type(exc).__name__)
+            logger.warning(
+                "Could not create model plan (%s); using a short fallback", type(exc).__name__
+            )
             return _normalize(TaskPlan(goal=task), task, 1)
 
-    async def replan(
-        self, task: str, observation: Observation, previous: TaskPlan
-    ) -> TaskPlan:
+    async def replan(self, task: str, observation: Observation, previous: TaskPlan) -> TaskPlan:
         """Regenerate pending objectives while retaining completed work."""
         try:
             fresh = _normalize(
@@ -69,7 +69,8 @@ class Planner:
         completed = [item.model_copy() for item in previous.steps if item.done]
         completed_descriptions = {item.description.casefold() for item in completed}
         pending = [
-            item for item in fresh.steps
+            item
+            for item in fresh.steps
             if item.description.casefold() not in completed_descriptions
         ]
         used = {item.id for item in completed}

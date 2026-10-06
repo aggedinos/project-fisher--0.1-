@@ -62,7 +62,9 @@ class TaskRuntime:
         future: asyncio.Future[bool] = asyncio.get_running_loop().create_future()
         self.permissions[request.id] = future
         self.publish(
-            AgentEvent(type="permission_requested", task_id=self.id, data={"request": request.model_dump()})
+            AgentEvent(
+                type="permission_requested", task_id=self.id, data={"request": request.model_dump()}
+            )
         )
         try:
             return await future
@@ -106,7 +108,9 @@ class FisherApplication:
                 "profile": "FISHER_PROFILE",
                 "headless": "FISHER_HEADLESS",
             }
-            explicit = {name for name, variable in process_overrides.items() if variable in os.environ}
+            explicit = {
+                name for name, variable in process_overrides.items() if variable in os.environ
+            }
             if "FISHER_PROFILE_MODE" in os.environ:
                 explicit.add("profile")
             if "provider" in explicit:
@@ -125,7 +129,9 @@ class FisherApplication:
         updated = self.settings.with_overrides(**values)
         self._settings_path.parent.mkdir(parents=True, exist_ok=True)
         safe = {key: getattr(updated, key) for key in allowed}
-        safe["permission_mode"] = str(getattr(safe["permission_mode"], "value", safe["permission_mode"]))
+        safe["permission_mode"] = str(
+            getattr(safe["permission_mode"], "value", safe["permission_mode"])
+        )
         temporary = self._settings_path.with_suffix(".json.tmp")
         temporary.write_text(json.dumps(safe, indent=2), encoding="utf-8")
         temporary.replace(self._settings_path)
@@ -244,19 +250,34 @@ class FisherApplication:
                     )
                 )
         except asyncio.CancelledError:
-            runtime.result = RunResult(task_id=runtime.id, status="stopped", error="Cancelled by user")
+            runtime.result = RunResult(
+                task_id=runtime.id, status="stopped", error="Cancelled by user"
+            )
             runtime.publish(
-                AgentEvent(type="agent_finished", task_id=runtime.id, data={"result": runtime.result.model_dump()})
+                AgentEvent(
+                    type="agent_finished",
+                    task_id=runtime.id,
+                    data={"result": runtime.result.model_dump()},
+                )
             )
         except Exception as exc:
             logger.error("Task %s failed (%s)", runtime.id, type(exc).__name__)
-            message = str(exc) if isinstance(exc, ProviderError) else f"Task failed ({type(exc).__name__})"
+            message = (
+                str(exc)
+                if isinstance(exc, ProviderError)
+                else f"Task failed ({type(exc).__name__})"
+            )
             runtime.result = RunResult(task_id=runtime.id, status="error", error=message)
-            runtime.publish(AgentEvent(type="agent_error", task_id=runtime.id, data={"message": message}))
-            runtime.publish(AgentEvent(
-                type="agent_finished", task_id=runtime.id,
-                data={"result": runtime.result.model_dump()},
-            ))
+            runtime.publish(
+                AgentEvent(type="agent_error", task_id=runtime.id, data={"message": message})
+            )
+            runtime.publish(
+                AgentEvent(
+                    type="agent_finished",
+                    task_id=runtime.id,
+                    data={"result": runtime.result.model_dump()},
+                )
+            )
         finally:
             runtime.cancel_permissions()
             try:
@@ -296,7 +317,9 @@ class FisherApplication:
         from fisher.sessions.recorder import SessionRecorder
         from fisher.tools.registry import ToolRegistry
 
-        settings = self.settings.with_overrides(**{k: v for k, v in overrides.items() if v is not None})
+        settings = self.settings.with_overrides(
+            **{k: v for k, v in overrides.items() if v is not None}
+        )
         browser = BrowserController(
             allow_private_network=settings.allow_private_network, data_dir=settings.data_dir
         )

@@ -35,8 +35,11 @@ BROWSER_EXECUTABLE = (
     os.environ.get("FISHER_TEST_BROWSER")
     or os.environ.get("FISHER_EXECUTABLE_PATH")
     or next(
-        (path for name in ("chromium", "chromium-browser", "google-chrome", "chrome")
-         if (path := shutil.which(name))),
+        (
+            path
+            for name in ("chromium", "chromium-browser", "google-chrome", "chrome")
+            if (path := shutil.which(name))
+        ),
         None,
     )
 )
@@ -116,8 +119,10 @@ class _StaleRecoveryProvider:
         self.old_element_id = _element(observation, "Continue")
         return TaskPlan(
             goal=task,
-            steps=[PlanStep(id="refresh", description="Refresh options"),
-                   PlanStep(id="continue", description="Select the new option")],
+            steps=[
+                PlanStep(id="refresh", description="Refresh options"),
+                PlanStep(id="continue", description="Select the new option"),
+            ],
         )
 
     async def decide(self, task, plan, observation, memory, tools, image=None) -> ModelDecision:
@@ -153,8 +158,10 @@ class _FormProvider:
     async def plan(self, task: str, observation: Observation) -> TaskPlan:
         return TaskPlan(
             goal=task,
-            steps=[PlanStep(id="fill", description="Fill the order details"),
-                   PlanStep(id="submit", description="Submit the order")],
+            steps=[
+                PlanStep(id="fill", description="Fill the order details"),
+                PlanStep(id="submit", description="Submit the order"),
+            ],
         )
 
     async def decide(self, task, plan, observation, memory, tools, image=None) -> ModelDecision:
@@ -189,8 +196,10 @@ class _TabProvider:
     async def plan(self, task: str, observation: Observation) -> TaskPlan:
         return TaskPlan(
             goal=task,
-            steps=[PlanStep(id="open", description="Open information in a new tab"),
-                   PlanStep(id="return", description="Return to the shop tab")],
+            steps=[
+                PlanStep(id="open", description="Open information in a new tab"),
+                PlanStep(id="return", description="Return to the shop tab"),
+            ],
         )
 
     async def decide(self, task, plan, observation, memory, tools, image=None) -> ModelDecision:
@@ -270,8 +279,11 @@ class BrowserFlowTests(IsolatedAsyncioTestCase):
 
     async def test_human_verification_stops_without_solving(self) -> None:
         agent = AgentOrchestrator(
-            _UnexpectedProvider(), browser=self.browser, registry=self.registry,
-            permission_mode=PermissionMode.SAFE, max_steps=3,
+            _UnexpectedProvider(),
+            browser=self.browser,
+            registry=self.registry,
+            permission_mode=PermissionMode.SAFE,
+            max_steps=3,
         )
         result = await agent.run("Read the protected page", f"{self.site_url}/captcha.html")
         self.assertEqual(result.status, "blocked", result.error)
@@ -319,9 +331,7 @@ class BrowserFlowTests(IsolatedAsyncioTestCase):
         page = stale.after_state or await self.browser.observe()
         self.assertIn("Options refreshed", page.text)
 
-        recovered = await self._execute(
-            "click_element", {"element_id": _element(page, "Continue")}
-        )
+        recovered = await self._execute("click_element", {"element_id": _element(page, "Continue")})
         self.assertTrue(recovered.success, recovered.message)
         page = recovered.after_state or await self.browser.observe()
         self.assertIn("New choice selected", page.text)
@@ -365,8 +375,10 @@ class BrowserFlowTests(IsolatedAsyncioTestCase):
         self.assertTrue(filled.success, filled.message)
         bounds = await self.browser.page.locator("#search-button").bounding_box()
         self.assertIsNotNone(bounds)
-        point = {"x": int(bounds["x"] + bounds["width"] / 2),
-                 "y": int(bounds["y"] + bounds["height"] / 2)}
+        point = {
+            "x": int(bounds["x"] + bounds["width"] / 2),
+            "y": int(bounds["y"] + bounds["height"] / 2),
+        }
         denied = await self._execute("click_coordinates", point)
         self.assertFalse(denied.success)
         self.assertEqual(denied.error_code, "permission_required")
@@ -430,8 +442,15 @@ class BrowserFlowTests(IsolatedAsyncioTestCase):
         self.assertTrue(approved.success, approved.message)
         self.assertEqual(requests[0].risk, RiskLevel.HIGH)
         self.assertEqual(requests[0].call.arguments["text"], "[redacted]")
-        self.assertEqual(await self.browser.page.locator("#card-number").input_value(), "4111111111111111")
-        self.assertEqual(next(item.value for item in approved.after_state.elements if item.name == "Card number"), "[redacted]")
+        self.assertEqual(
+            await self.browser.page.locator("#card-number").input_value(), "4111111111111111"
+        )
+        self.assertEqual(
+            next(
+                item.value for item in approved.after_state.elements if item.name == "Card number"
+            ),
+            "[redacted]",
+        )
 
     async def test_new_tab_switch_and_close(self) -> None:
         page = await self._navigate("index.html")
@@ -466,8 +485,12 @@ class BrowserFlowTests(IsolatedAsyncioTestCase):
     async def test_agent_searches_opens_product_and_reports_observed_price(self) -> None:
         events: list[AgentEvent] = []
         agent = AgentOrchestrator(
-            _ShopProvider(), browser=self.browser, registry=self.registry,
-            permission_mode=PermissionMode.SAFE, on_event=events.append, max_steps=8,
+            _ShopProvider(),
+            browser=self.browser,
+            registry=self.registry,
+            permission_mode=PermissionMode.SAFE,
+            on_event=events.append,
+            max_steps=8,
         )
         result = await agent.run(
             "Find Studio headphones in the local shop and report their price",
@@ -483,41 +506,55 @@ class BrowserFlowTests(IsolatedAsyncioTestCase):
         events: list[AgentEvent] = []
         provider = _StaleRecoveryProvider()
         agent = AgentOrchestrator(
-            provider, browser=self.browser, registry=self.registry,
-            permission_mode=PermissionMode.SAFE, on_event=events.append, max_steps=6,
+            provider,
+            browser=self.browser,
+            registry=self.registry,
+            permission_mode=PermissionMode.SAFE,
+            on_event=events.append,
+            max_steps=6,
         )
         result = await agent.run(
             "Refresh options and select the new choice", f"{self.site_url}/index.html"
         )
         self.assertEqual(result.status, "completed", result.error)
         self.assertTrue(provider.attempted_stale)
-        self.assertTrue(any(
-            event.type == "recovery" and event.data.get("strategy") == "reobserve"
-            for event in events
-        ))
+        self.assertTrue(
+            any(
+                event.type == "recovery" and event.data.get("strategy") == "reobserve"
+                for event in events
+            )
+        )
         self.assertIn("New choice selected", (await self.browser.observe()).text)
 
     async def test_agent_stops_at_order_submission_permission_boundary(self) -> None:
         events: list[AgentEvent] = []
         agent = AgentOrchestrator(
-            _FormProvider(), browser=self.browser, registry=self.registry,
-            permission_mode=PermissionMode.SAFE, on_event=events.append, max_steps=7,
+            _FormProvider(),
+            browser=self.browser,
+            registry=self.registry,
+            permission_mode=PermissionMode.SAFE,
+            on_event=events.append,
+            max_steps=7,
         )
-        result = await agent.run(
-            "Fill the order form and submit it", f"{self.site_url}/form.html"
-        )
+        result = await agent.run("Fill the order form and submit it", f"{self.site_url}/form.html")
         self.assertEqual(result.status, "blocked", result.error)
-        self.assertTrue(any(
-            event.type == "tool_result" and event.data.get("error_code") == "permission_required"
-            for event in events
-        ))
+        self.assertTrue(
+            any(
+                event.type == "tool_result"
+                and event.data.get("error_code") == "permission_required"
+                for event in events
+            )
+        )
         self.assertIn("No order submitted", (await self.browser.observe()).text)
 
     async def test_agent_inspects_new_tab_and_returns_to_first(self) -> None:
         provider = _TabProvider()
         agent = AgentOrchestrator(
-            provider, browser=self.browser, registry=self.registry,
-            permission_mode=PermissionMode.SAFE, max_steps=5,
+            provider,
+            browser=self.browser,
+            registry=self.registry,
+            permission_mode=PermissionMode.SAFE,
+            max_steps=5,
         )
         result = await agent.run(
             "Open the information tab, inspect it, and return to the shop",

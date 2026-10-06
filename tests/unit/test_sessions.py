@@ -8,7 +8,15 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from fisher.models import AgentEvent, ElementInfo, Observation, PlanStep, TaskPlan, ToolCall, ToolResult
+from fisher.models import (
+    AgentEvent,
+    ElementInfo,
+    Observation,
+    PlanStep,
+    TaskPlan,
+    ToolCall,
+    ToolResult,
+)
 from fisher.sessions import SessionRecorder, get_session, list_sessions, replay_events
 from fisher.sessions import recorder as recorder_module
 
@@ -24,13 +32,19 @@ class SessionTests(unittest.TestCase):
         session_id = recorder.start("Log in", "ollama")
         self.assertEqual(session_id, "session-000001")
 
-        call = ToolCall(name="browser_fill", arguments={"selector": "#password", "text": "hunter2-secret"})
-        recorder.record_event(AgentEvent(type="ToolStarted", task_id="task-1", data={"call": call.model_dump()}))
+        call = ToolCall(
+            name="browser_fill", arguments={"selector": "#password", "text": "hunter2-secret"}
+        )
+        recorder.record_event(
+            AgentEvent(type="ToolStarted", task_id="task-1", data={"call": call.model_dump()})
+        )
         observation = Observation(
             url="https://example.test/login?token=abc123#private",
             title="Sign in",
             text="Authorization: Bearer abc.def.ghi",
-            elements=[ElementInfo(id="pwd", role="textbox", value="hunter2-secret", input_type="password")],
+            elements=[
+                ElementInfo(id="pwd", role="textbox", value="hunter2-secret", input_type="password")
+            ],
         )
         result = ToolResult(
             call=call,
@@ -54,7 +68,9 @@ class SessionTests(unittest.TestCase):
             self.assertNotIn(secret, raw_json)
         self.assertEqual(session["steps"][0]["call"]["arguments"]["text"], "[REDACTED]")
         self.assertEqual(session["steps"][0]["observation"]["elements"][0]["value"], "[REDACTED]")
-        self.assertEqual(session["steps"][0]["url"], "https://example.test/login?token=%5BREDACTED%5D")
+        self.assertEqual(
+            session["steps"][0]["url"], "https://example.test/login?token=%5BREDACTED%5D"
+        )
         self.assertEqual(session["steps"][0]["verification"], "Value [REDACTED] accepted")
         self.assertEqual(session["steps"][0]["confidence"], 0.8)
         screenshot_ref = session["steps"][1]["screenshot"]
@@ -67,7 +83,9 @@ class SessionTests(unittest.TestCase):
         first = SessionRecorder(self.root)
         first_id = first.start("Visit page", "gemini")
         call = ToolCall(name="browser_click", arguments={"selector": "#buy"})
-        first.record_event(AgentEvent(type="ToolFinished", task_id="task-1", data={"call": call.model_dump()}))
+        first.record_event(
+            AgentEvent(type="ToolFinished", task_id="task-1", data={"call": call.model_dump()})
+        )
         first.finish("completed", "Done")
         second = SessionRecorder(self.root)
         second_id = second.start("Other", "ollama")
@@ -115,13 +133,17 @@ class SessionTests(unittest.TestCase):
     def test_malformed_url_is_not_copied_into_session(self) -> None:
         recorder = SessionRecorder(self.root)
         session_id = recorder.start("Read", "ollama")
-        recorder.record_event(AgentEvent(
-            type="ObservationUpdated", task_id="t", data={"url": "https://[bad?token=secret123"}
-        ))
+        recorder.record_event(
+            AgentEvent(
+                type="ObservationUpdated", task_id="t", data={"url": "https://[bad?token=secret123"}
+            )
+        )
         recorder.finish("blocked")
         raw = (self.root / session_id / "session.json").read_text(encoding="utf-8")
         self.assertNotIn("secret123", raw)
-        self.assertEqual(get_session(self.root, session_id)["events"][0]["data"]["url"], "[invalid URL]")
+        self.assertEqual(
+            get_session(self.root, session_id)["events"][0]["data"]["url"], "[invalid URL]"
+        )
 
     def test_invalid_ids_and_atomic_snapshot(self) -> None:
         recorder = SessionRecorder(self.root)
@@ -129,7 +151,9 @@ class SessionTests(unittest.TestCase):
         snapshot = self.root / session_id / "session.json"
         original = snapshot.read_bytes()
 
-        with patch.object(recorder_module.os, "replace", side_effect=OSError("simulated interrupted save")):
+        with patch.object(
+            recorder_module.os, "replace", side_effect=OSError("simulated interrupted save")
+        ):
             with self.assertRaisesRegex(OSError, "interrupted"):
                 recorder.record_event(AgentEvent(type="ObservationUpdated", task_id="t"))
         self.assertEqual(snapshot.read_bytes(), original)

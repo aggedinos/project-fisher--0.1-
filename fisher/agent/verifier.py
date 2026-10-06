@@ -14,8 +14,15 @@ _CLICK_ACTIONS = {"click_element", "click_coordinates"}
 
 def _element_states(observation: Observation) -> tuple[tuple[object, ...], ...]:
     return tuple(
-        (item.role, item.name, item.text, item.visible, item.enabled,
-         item.href, item.value if item.input_type != "password" else "[password]")
+        (
+            item.role,
+            item.name,
+            item.text,
+            item.visible,
+            item.enabled,
+            item.href,
+            item.value if item.input_type != "password" else "[password]",
+        )
         for item in observation.elements
     )
 
@@ -50,9 +57,18 @@ def verify_change(
             return True, evidence or ["page observation captured"]
         return False, ["page observation is empty"]
     if name == "navigate":
-        relevant = [signal for signal in evidence if signal.startswith("URL changed")
-                    or signal in {"page text changed", "page title changed",
-                                  "page fingerprint changed", "tab set or tab URL changed"}]
+        relevant = [
+            signal
+            for signal in evidence
+            if signal.startswith("URL changed")
+            or signal
+            in {
+                "page text changed",
+                "page title changed",
+                "page fingerprint changed",
+                "tab set or tab URL changed",
+            }
+        ]
         return bool(relevant), relevant or ["navigation produced no observable page change"]
     if name == "switch_tab":
         relevant = [signal for signal in evidence if signal == "active tab changed"]
@@ -61,14 +77,28 @@ def verify_change(
         relevant = [signal for signal in evidence if signal == "tab set or tab URL changed"]
         return bool(relevant), relevant or ["tab set did not change"]
     if name in _INPUT_ACTIONS:
-        relevant = [signal for signal in evidence if signal in {
-            "interactive element state changed", "page fingerprint changed", "page text changed"
-        }]
+        relevant = [
+            signal
+            for signal in evidence
+            if signal
+            in {
+                "interactive element state changed",
+                "page fingerprint changed",
+                "page text changed",
+            }
+        ]
         return bool(relevant), relevant or ["input value and page state did not change"]
     if name == "scroll":
-        relevant = [signal for signal in evidence if signal in {
-            "page fingerprint changed", "page text changed", "interactive element state changed"
-        }]
+        relevant = [
+            signal
+            for signal in evidence
+            if signal
+            in {
+                "page fingerprint changed",
+                "page text changed",
+                "interactive element state changed",
+            }
+        ]
         return bool(relevant), relevant or ["scroll position or visible content did not change"]
     if name in _CLICK_ACTIONS or name == "press_key":
         return bool(evidence), evidence or ["interaction produced no observable page change"]

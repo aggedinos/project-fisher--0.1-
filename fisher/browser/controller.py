@@ -32,7 +32,10 @@ from fisher.security.policy import SecurityError, SecurityPolicy
 
 class BrowserController:
     def __init__(
-        self, *, allow_private_network: bool = False, policy: SecurityPolicy | None = None,
+        self,
+        *,
+        allow_private_network: bool = False,
+        policy: SecurityPolicy | None = None,
         data_dir: Path | None = None,
     ) -> None:
         self.policy = policy or SecurityPolicy(allow_private_network=allow_private_network)
@@ -195,18 +198,24 @@ class BrowserController:
     async def screenshot(self) -> bytes:
         """Return a compact JPEG with observed sensitive inputs covered."""
         page = self.page
-        mask = [page.locator(
-            "input[type='password'], input[autocomplete^='cc-'], "
-            "input[autocomplete='one-time-code']"
-        )]
+        mask = [
+            page.locator(
+                "input[type='password'], input[autocomplete^='cc-'], "
+                "input[autocomplete='one-time-code']"
+            )
+        ]
         if self._last_observation is not None:
             mask.extend(
                 page.locator(f'[data-fisher-id="{item.id}"]')
-                for item in self._last_observation.elements if item.sensitive
+                for item in self._last_observation.elements
+                if item.sensitive
             )
         return await page.screenshot(
-            type="jpeg", quality=70, full_page=False,
-            mask=mask, mask_color="#101820",
+            type="jpeg",
+            quality=70,
+            full_page=False,
+            mask=mask,
+            mask_color="#101820",
         )
 
     async def navigate(self, url: str) -> None:

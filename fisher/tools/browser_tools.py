@@ -44,16 +44,27 @@ class ToolDefinition:
 DEFINITIONS: dict[str, ToolDefinition] = {
     item.name: item
     for item in [
-        ToolDefinition("navigate", "Open an absolute HTTP or HTTPS URL.", NavigateArgs, timeout_seconds=35),
-        ToolDefinition("read_page", "Read the current compact page observation.", ReadPageArgs, retryable=False),
-        ToolDefinition("click_element", "Click an element ID from the latest observation.", ElementArgs),
+        ToolDefinition(
+            "navigate", "Open an absolute HTTP or HTTPS URL.", NavigateArgs, timeout_seconds=35
+        ),
+        ToolDefinition(
+            "read_page", "Read the current compact page observation.", ReadPageArgs, retryable=False
+        ),
+        ToolDefinition(
+            "click_element", "Click an element ID from the latest observation.", ElementArgs
+        ),
         ToolDefinition("fill_element", "Replace a field's value with text.", TextArgs),
         ToolDefinition("type_text", "Type text into an observed field.", TextArgs),
         ToolDefinition("press_key", "Press a supported browser key.", KeyArgs),
         ToolDefinition("scroll", "Scroll the active page by signed pixels.", ScrollArgs),
         ToolDefinition("switch_tab", "Activate an observed browser tab.", TabArgs),
         ToolDefinition("close_tab", "Close a tab when another tab remains.", TabArgs),
-        ToolDefinition("click_coordinates", "Click viewport coordinates only when no semantic target exists.", CoordinatesArgs, risk=RiskLevel.HIGH),
+        ToolDefinition(
+            "click_coordinates",
+            "Click viewport coordinates only when no semantic target exists.",
+            CoordinatesArgs,
+            risk=RiskLevel.HIGH,
+        ),
     ]
 }
 

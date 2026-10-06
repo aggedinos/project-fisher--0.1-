@@ -12,7 +12,9 @@ from .nvidia import NvidiaProvider
 from .ollama import OllamaProvider
 
 
-def build_provider(settings: Settings, *, transport: httpx.AsyncBaseTransport | None = None) -> Provider:
+def build_provider(
+    settings: Settings, *, transport: httpx.AsyncBaseTransport | None = None
+) -> Provider:
     common = {
         "temperature": settings.temperature,
         "timeout_seconds": settings.timeout_seconds,
@@ -24,7 +26,9 @@ def build_provider(settings: Settings, *, transport: httpx.AsyncBaseTransport | 
     if settings.provider == "ollama":
         return OllamaProvider(settings.model, settings.ollama_base_url, **common)
     if settings.provider == "nvidia":
-        return NvidiaProvider(settings.model, settings.api_key_for_provider(), settings.nvidia_base_url, **common)
+        return NvidiaProvider(
+            settings.model, settings.api_key_for_provider(), settings.nvidia_base_url, **common
+        )
     raise ProviderError("Unknown model provider")
 
 

@@ -65,7 +65,7 @@ class RecoveryEngine:
     def before_action(self, call: ToolCall, observation: Observation) -> RecoveryDecision:
         signature = self.signature(call, observation)
         if len(self.recent) >= self.max_same_action and all(
-            value == signature for value in list(self.recent)[-self.max_same_action:]
+            value == signature for value in list(self.recent)[-self.max_same_action :]
         ):
             return RecoveryDecision(RecoveryStrategy.REPLAN, "identical action on unchanged page")
         if len(self.recent) >= 4:
@@ -75,8 +75,12 @@ class RecoveryEngine:
         return RecoveryDecision(RecoveryStrategy.CONTINUE, "")
 
     def after_action(
-        self, call: ToolCall, before: Observation, result: ToolResult,
-        *, retry_allowed: bool,
+        self,
+        call: ToolCall,
+        before: Observation,
+        result: ToolResult,
+        *,
+        retry_allowed: bool,
     ) -> RecoveryDecision:
         signature = self.signature(call, before)
         self.recent.append(signature)
@@ -87,8 +91,13 @@ class RecoveryEngine:
 
         self.consecutive_failures += 1
         code = (result.error_code or "").lower()
-        if code in {"permission_denied", "permission_required", "policy_denied",
-                    "unsafe_url", "blocked_url"}:
+        if code in {
+            "permission_denied",
+            "permission_required",
+            "policy_denied",
+            "unsafe_url",
+            "blocked_url",
+        }:
             return RecoveryDecision(RecoveryStrategy.STOP, result.message or code)
         if self.consecutive_failures >= self.max_consecutive_failures:
             return RecoveryDecision(RecoveryStrategy.REPLAN, "several consecutive failures")
@@ -99,4 +108,6 @@ class RecoveryEngine:
             if count < self.max_retry_per_action:
                 self.retries[signature] = count + 1
                 return RecoveryDecision(RecoveryStrategy.RETRY, "transient tool failure")
-        return RecoveryDecision(RecoveryStrategy.REOBSERVE, result.message or "action did not change page")
+        return RecoveryDecision(
+            RecoveryStrategy.REOBSERVE, result.message or "action did not change page"
+        )

@@ -37,8 +37,10 @@ async def permitted(
         return False
     safe_arguments = {
         key: (
-            safe_url(value) if key == "url" and isinstance(value, str)
-            else "[redacted]" if key in {"text", "password", "token", "api_key"}
+            safe_url(value)
+            if key == "url" and isinstance(value, str)
+            else "[redacted]"
+            if key in {"text", "password", "token", "api_key"}
             else value
         )
         for key, value in call.arguments.items()

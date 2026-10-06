@@ -18,7 +18,9 @@ def default_data_dir() -> Path:
         return base / "Project Fisher"
     if sys.platform == "darwin":
         return Path.home() / "Library" / "Application Support" / "Project Fisher"
-    return Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share") / "project-fisher"
+    return (
+        Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share") / "project-fisher"
+    )
 
 
 def ensure_directory(path: Path) -> Path:

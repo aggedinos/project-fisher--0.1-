@@ -90,9 +90,7 @@ def create_api(application: FisherApplication | None = None) -> FastAPI:
 
     @api.post("/api/tasks", status_code=202)
     async def start_task(payload: StartTaskRequest) -> dict[str, str]:
-        overrides = payload.model_dump(
-            exclude={"task", "url"}, exclude_none=True
-        )
+        overrides = payload.model_dump(exclude={"task", "url"}, exclude_none=True)
         try:
             runtime = await service.start_task(payload.task, payload.url, **overrides)
         except TaskBusyError as exc:
@@ -160,7 +158,9 @@ def create_api(application: FisherApplication | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="Unknown task") from exc
         if runtime.frame is None:
             raise HTTPException(status_code=404, detail="No browser frame yet")
-        return Response(runtime.frame, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
+        return Response(
+            runtime.frame, media_type="image/jpeg", headers={"Cache-Control": "no-store"}
+        )
 
     def recorder() -> SessionRecorder:
         return SessionRecorder(root=Path(service.settings.data_dir) / "sessions")

@@ -88,7 +88,11 @@ class Settings(BaseModel):
     def with_overrides(self, **overrides: object) -> Settings:
         """Return a fully revalidated copy for CLI or GUI overrides."""
         values = self.model_dump()
-        if "provider" in overrides and "model" not in overrides and overrides["provider"] != self.provider:
+        if (
+            "provider" in overrides
+            and "model" not in overrides
+            and overrides["provider"] != self.provider
+        ):
             values["model"] = ""
         values.update(overrides)
         return type(self).model_validate(values)
@@ -106,7 +110,11 @@ class Settings(BaseModel):
         """
         if env_file is None:
             env_file = Path(__file__).resolve().parents[2] / ".env"
-        values = {k: v for k, v in dotenv_values(env_file).items() if v is not None} if env_file.is_file() else {}
+        values = (
+            {k: v for k, v in dotenv_values(env_file).items() if v is not None}
+            if env_file.is_file()
+            else {}
+        )
         values.update(os.environ)
         fields = {
             "provider": "FISHER_PROVIDER",

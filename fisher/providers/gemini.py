@@ -20,10 +20,14 @@ class GeminiProvider(Provider):
     async def _complete(self, system: str, user: str, image: bytes | None) -> str:
         parts: list[dict[str, object]] = [{"text": user}]
         if image is not None:
-            parts.append({"inlineData": {
-                "mimeType": image_media_type(image),
-                "data": base64.b64encode(image).decode("ascii"),
-            }})
+            parts.append(
+                {
+                    "inlineData": {
+                        "mimeType": image_media_type(image),
+                        "data": base64.b64encode(image).decode("ascii"),
+                    }
+                }
+            )
         payload = {
             "systemInstruction": {"parts": [{"text": system}]},
             "contents": [{"role": "user", "parts": parts}],
@@ -45,7 +49,13 @@ class GeminiProvider(Provider):
         parts = content.get("parts") if isinstance(content, dict) else None
         if not isinstance(parts, list):
             raise ProviderOutputError("Gemini returned no text content")
-        text = "".join(part["text"] for part in parts if isinstance(part, dict) and isinstance(part.get("text"), str) and not part.get("thought"))
+        text = "".join(
+            part["text"]
+            for part in parts
+            if isinstance(part, dict)
+            and isinstance(part.get("text"), str)
+            and not part.get("thought")
+        )
         if not text.strip():
             raise ProviderOutputError("Gemini returned an empty completion")
         return text

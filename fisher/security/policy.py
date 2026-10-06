@@ -148,7 +148,9 @@ class SecurityPolicy:
         if name in {"read_page", "scroll", "switch_tab", "close_tab"}:
             return RiskAssessment(RiskLevel.LOW, "Inspect or move around the browser")
         if name == "click_coordinates":
-            return RiskAssessment(RiskLevel.HIGH, "The clicked target cannot be identified semantically")
+            return RiskAssessment(
+                RiskLevel.HIGH, "The clicked target cannot be identified semantically"
+            )
         if name == "press_key":
             key = str(args.get("key", "")).lower()
             if key in {"enter", "numpadenter"}:
@@ -162,9 +164,7 @@ class SecurityPolicy:
         if name in {"fill_element", "type_text"}:
             target = self._element(args.get("element_id"), observation)
             if target and (target.sensitive or target.input_type in {"password", "hidden"}):
-                return RiskAssessment(
-                    RiskLevel.HIGH, "Entering data in a sensitive field"
-                )
+                return RiskAssessment(RiskLevel.HIGH, "Entering data in a sensitive field")
             return RiskAssessment(RiskLevel.LOW, "Enter text in a visible field")
         if name == "click_element":
             target = self._element(args.get("element_id"), observation)

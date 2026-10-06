@@ -35,8 +35,11 @@ BROWSER_EXECUTABLE = (
     os.environ.get("FISHER_TEST_BROWSER")
     or os.environ.get("FISHER_EXECUTABLE_PATH")
     or next(
-        (path for name in ("chromium", "chromium-browser", "google-chrome", "chrome")
-         if (path := shutil.which(name))),
+        (
+            path
+            for name in ("chromium", "chromium-browser", "google-chrome", "chrome")
+            if (path := shutil.which(name))
+        ),
         None,
     )
 )
@@ -86,8 +89,13 @@ class _FormProvider:
         )
 
     async def decide(
-        self, task: str, plan: TaskPlan, observation: Observation,
-        memory: str, tools: object, image: bytes | None = None,
+        self,
+        task: str,
+        plan: TaskPlan,
+        observation: Observation,
+        memory: str,
+        tools: object,
+        image: bytes | None = None,
     ) -> ModelDecision:
         if "Order submitted for Taylor Fisher" in observation.text:
             return ModelDecision(answer="The order was submitted for Taylor Fisher.")
@@ -147,13 +155,16 @@ class ApiFlowTests(IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
         self.data_dir = tempfile.TemporaryDirectory(prefix="fisher-api-test-")
         settings = Settings(
-            data_dir=Path(self.data_dir.name), allow_private_network=True,
+            data_dir=Path(self.data_dir.name),
+            allow_private_network=True,
             executable_path=Path(BROWSER_EXECUTABLE) if BROWSER_EXECUTABLE else None,
             max_steps=8,
         )
         self.service = FisherApplication(settings)
         self.provider: object | None = None
-        self.provider_patch = patch("fisher.providers.build_provider", side_effect=lambda _: self.provider)
+        self.provider_patch = patch(
+            "fisher.providers.build_provider", side_effect=lambda _: self.provider
+        )
         self.provider_patch.start()
         self.api = create_api(self.service)
 
@@ -162,8 +173,12 @@ class ApiFlowTests(IsolatedAsyncioTestCase):
         self.api_socket.listen(128)
         port = self.api_socket.getsockname()[1]
         config = uvicorn.Config(
-            self.api, host="127.0.0.1", port=port, log_level="error",
-            access_log=False, lifespan="off",
+            self.api,
+            host="127.0.0.1",
+            port=port,
+            log_level="error",
+            access_log=False,
+            lifespan="off",
         )
         self.server = uvicorn.Server(config)
         self.server_task = asyncio.create_task(self.server.serve(sockets=[self.api_socket]))
@@ -288,9 +303,11 @@ class ApiFlowTests(IsolatedAsyncioTestCase):
         self.assertEqual((await self.client.post("/api/tasks/missing/stop")).status_code, 404)
         self.assertEqual((await self.client.get("/api/tasks/missing/events")).status_code, 404)
         self.assertEqual(
-            (await self.client.post(
-                "/api/tasks/missing/permissions/missing", json={"approved": True}
-            )).status_code,
+            (
+                await self.client.post(
+                    "/api/tasks/missing/permissions/missing", json={"approved": True}
+                )
+            ).status_code,
             404,
         )
 
@@ -300,7 +317,8 @@ class ApiFlowTests(IsolatedAsyncioTestCase):
         self.assertEqual(accepted.status_code, 200)
         port = self.client.base_url.port
         rejected = await self.client.post(
-            "/api/tasks", json={"task": "Read page"},
+            "/api/tasks",
+            json={"task": "Read page"},
             headers={"Origin": f"http://127.0.0.1:{port + 1}"},
         )
         self.assertEqual(rejected.status_code, 403)
@@ -315,7 +333,10 @@ class ApiFlowTests(IsolatedAsyncioTestCase):
             self.assertEqual(runtime.result.status, "error")
             self.assertNotIn("secret123", json.dumps(runtime.result.model_dump()))
             self.assertTrue(any(event.type == "agent_finished" for _, event in runtime.events))
-        with patch("fisher.providers.build_provider", side_effect=ProviderError("GEMINI_API_KEY is required")):
+        with patch(
+            "fisher.providers.build_provider",
+            side_effect=ProviderError("GEMINI_API_KEY is required"),
+        ):
             task_id = await self._start("Read page", "product.html")
             runtime = self.service.get_task(task_id)
             await asyncio.wait_for(runtime.done.wait(), timeout=5)
@@ -332,7 +353,9 @@ class ApiFlowTests(IsolatedAsyncioTestCase):
                 await page.goto(str(self.client.base_url), wait_until="networkidle")
                 await page.get_by_role("heading", name="Control center.").wait_for()
                 self.assertIn("Ollama", await page.locator(".composer-model").inner_text())
-                await page.get_by_role("textbox", name="Task", exact=True).fill("Wait until stopped")
+                await page.get_by_role("textbox", name="Task", exact=True).fill(
+                    "Wait until stopped"
+                )
                 await page.get_by_role("textbox", name="Starting URL").fill(
                     f"{self.site_url}/product.html"
                 )

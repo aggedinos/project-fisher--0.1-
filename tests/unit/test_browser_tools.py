@@ -34,12 +34,19 @@ def _page() -> Observation:
 class PolicyTests(unittest.TestCase):
     def test_web_urls_only_and_private_network_blocked(self) -> None:
         policy = SecurityPolicy()
-        self.assertEqual(policy.validate_url("https://example.com/search?q=x"),
-                         "https://example.com/search?q=x")
+        self.assertEqual(
+            policy.validate_url("https://example.com/search?q=x"), "https://example.com/search?q=x"
+        )
         for url in (
-            "file:///etc/passwd", "javascript:alert(1)", "data:text/html,x",
-            "http://localhost:8000/", "http://127.0.0.1/", "http://127.1/",
-            "http://10.2.3.4/", "http://[::1]/", "http://169.254.169.254/",
+            "file:///etc/passwd",
+            "javascript:alert(1)",
+            "data:text/html,x",
+            "http://localhost:8000/",
+            "http://127.0.0.1/",
+            "http://127.1/",
+            "http://10.2.3.4/",
+            "http://[::1]/",
+            "http://169.254.169.254/",
             "http://name:password@example.com/",
         ):
             with self.subTest(url=url), self.assertRaises(SecurityError):
@@ -55,19 +62,29 @@ class PolicyTests(unittest.TestCase):
         policy = SecurityPolicy()
         page = _page()
         self.assertEqual(
-            policy.classify(ToolCall(name="click_element", arguments={"element_id": "o1-e1"}), page).level,
+            policy.classify(
+                ToolCall(name="click_element", arguments={"element_id": "o1-e1"}), page
+            ).level,
             RiskLevel.HIGH,
         )
         self.assertEqual(
-            policy.classify(ToolCall(name="click_element", arguments={"element_id": "o1-e2"}), page).level,
+            policy.classify(
+                ToolCall(name="click_element", arguments={"element_id": "o1-e2"}), page
+            ).level,
             RiskLevel.LOW,
         )
         self.assertEqual(
-            policy.classify(ToolCall(name="fill_element", arguments={"element_id": "o1-e3", "text": "secret"}), page).level,
+            policy.classify(
+                ToolCall(name="fill_element", arguments={"element_id": "o1-e3", "text": "secret"}),
+                page,
+            ).level,
             RiskLevel.HIGH,
         )
         self.assertEqual(
-            policy.classify(ToolCall(name="fill_element", arguments={"element_id": "o1-e4", "text": "4111"}), page).level,
+            policy.classify(
+                ToolCall(name="fill_element", arguments={"element_id": "o1-e4", "text": "4111"}),
+                page,
+            ).level,
             RiskLevel.HIGH,
         )
         self.assertEqual(
@@ -75,10 +92,11 @@ class PolicyTests(unittest.TestCase):
             RiskLevel.HIGH,
         )
         self.assertEqual(
-            policy.classify(ToolCall(name="click_coordinates", arguments={"x": 1, "y": 2}), page).level,
+            policy.classify(
+                ToolCall(name="click_coordinates", arguments={"x": 1, "y": 2}), page
+            ).level,
             RiskLevel.HIGH,
         )
-
 
     def test_mode_boundaries(self) -> None:
         self.assertFalse(requires_approval(PermissionMode.AUTO, RiskLevel.MEDIUM, "navigate"))
@@ -132,20 +150,28 @@ class RegistryTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_unknown_tool_and_strict_schema_are_rejected(self) -> None:
         registry = ToolRegistry(self.FakeBrowser())
-        unknown = await registry.execute(ToolCall(name="run_python", arguments={"source": "print(1)"}))
+        unknown = await registry.execute(
+            ToolCall(name="run_python", arguments={"source": "print(1)"})
+        )
         self.assertFalse(unknown.success)
         self.assertEqual(unknown.error_code, "unknown_tool")
         invalid = await registry.execute(ToolCall(name="scroll", arguments={"delta_y": "500"}))
         self.assertFalse(invalid.success)
         self.assertEqual(invalid.error_code, "invalid_arguments")
-        extra = await registry.execute(ToolCall(name="navigate", arguments={"url": "https://example.com", "script": "x"}))
+        extra = await registry.execute(
+            ToolCall(name="navigate", arguments={"url": "https://example.com", "script": "x"})
+        )
         self.assertEqual(extra.error_code, "invalid_arguments")
 
     async def test_policy_and_approval_fail_closed_before_browser_action(self) -> None:
         registry = ToolRegistry(self.FakeBrowser())
-        denied_url = await registry.execute(ToolCall(name="navigate", arguments={"url": "http://127.0.0.1/"}))
+        denied_url = await registry.execute(
+            ToolCall(name="navigate", arguments={"url": "http://127.0.0.1/"})
+        )
         self.assertEqual(denied_url.error_code, "blocked_url")
-        submit = await registry.execute(ToolCall(name="click_element", arguments={"element_id": "o1-e1"}))
+        submit = await registry.execute(
+            ToolCall(name="click_element", arguments={"element_id": "o1-e1"})
+        )
         self.assertEqual(submit.error_code, "permission_required")
 
     async def test_permission_request_redacts_entered_text(self) -> None:
@@ -161,7 +187,9 @@ class RegistryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(requests[0].call.arguments["text"], "[redacted]")
         await permitted(
             mode=PermissionMode.SUPERVISED,
-            call=ToolCall(name="navigate", arguments={"url": "https://example.com/a?token=secret123"}),
+            call=ToolCall(
+                name="navigate", arguments={"url": "https://example.com/a?token=secret123"}
+            ),
             risk=RiskLevel.LOW,
             reason="Open a web page",
             approve=lambda request: requests.append(request) or True,

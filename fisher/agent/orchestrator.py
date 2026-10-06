@@ -25,7 +25,10 @@ from fisher.models import (
 from .memory import MemoryManager, safe_call, safe_url
 from .planner import Planner
 from .recovery import (
-    RecoveryDecision, RecoveryEngine, RecoveryStrategy, human_verification_required,
+    RecoveryDecision,
+    RecoveryEngine,
+    RecoveryStrategy,
+    human_verification_required,
 )
 from .state import AgentState, Phase
 from .verifier import verify_change
@@ -36,8 +39,19 @@ EventCallback = Callable[[AgentEvent], Any]
 _ELEMENT_ID = re.compile(r"o\d+-e\d+\Z")
 _TAB_ID = re.compile(r"t\d+\Z")
 _PUBLIC_KEYS = {
-    "Enter", "Tab", "Escape", "Backspace", "Delete", "Home", "End",
-    "PageUp", "PageDown", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
+    "Enter",
+    "Tab",
+    "Escape",
+    "Backspace",
+    "Delete",
+    "Home",
+    "End",
+    "PageUp",
+    "PageDown",
+    "ArrowUp",
+    "ArrowDown",
+    "ArrowLeft",
+    "ArrowRight",
 }
 
 
@@ -61,8 +75,9 @@ def _public_call(call: ToolCall) -> dict[str, Any]:
 
 
 def _public_evidence(evidence: list[str]) -> list[str]:
-    return ["URL changed" if item.startswith("URL changed:") else item[:180]
-            for item in evidence[:5]]
+    return [
+        "URL changed" if item.startswith("URL changed:") else item[:180] for item in evidence[:5]
+    ]
 
 
 def _public_result(result: ToolResult) -> dict[str, Any]:
@@ -71,9 +86,11 @@ def _public_result(result: ToolResult) -> dict[str, Any]:
         "success": result.success,
         "changed": result.changed,
         "message": (
-            "Action verified" if result.success and result.changed else
-            "Page observed" if result.success else
-            (result.error_code or "Action failed").replace("_", " ").capitalize()
+            "Action verified"
+            if result.success and result.changed
+            else "Page observed"
+            if result.success
+            else (result.error_code or "Action failed").replace("_", " ").capitalize()
         ),
         "evidence": _public_evidence(result.evidence),
         "error_code": result.error_code,
@@ -203,9 +220,11 @@ class AgentOrchestrator:
         except Exception as exc:
             logger.error("Tool execution failed: %s (%s)", call.name, type(exc).__name__)
             result = ToolResult(
-                call=call, success=False,
+                call=call,
+                success=False,
                 message=f"Tool raised {type(exc).__name__}",
-                error_code="tool_exception", retryable=False,
+                error_code="tool_exception",
+                retryable=False,
                 before_state=before,
             )
 
@@ -216,11 +235,11 @@ class AgentOrchestrator:
             try:
                 result.after_state = await self.browser.observe()
             except Exception as exc:
-                logger.warning("Could not observe browser after %s (%s)", call.name, type(exc).__name__)
+                logger.warning(
+                    "Could not observe browser after %s (%s)", call.name, type(exc).__name__
+                )
         if result.success and result.before_state is not None and result.after_state is not None:
-            verified, evidence = verify_change(
-                call, result.before_state, result.after_state
-            )
+            verified, evidence = verify_change(call, result.before_state, result.after_state)
             result.evidence = list(dict.fromkeys(result.evidence + evidence))
             if not verified:
                 result.success = False
@@ -243,7 +262,8 @@ class AgentOrchestrator:
         )
         await self._emit("tool_finished", result=_public_result(result))
         await self._emit(
-            "verification_result", changed=result.changed if result.success else False,
+            "verification_result",
+            changed=result.changed if result.success else False,
             evidence=_public_evidence(result.evidence),
         )
         if result.after_state is not None:
@@ -263,21 +283,29 @@ class AgentOrchestrator:
         return any(spec.name == name and spec.retryable for spec in self._specs())
 
     async def _record_step(
-        self, call: ToolCall, result: ToolResult, plan: TaskPlan,
+        self,
+        call: ToolCall,
+        result: ToolResult,
+        plan: TaskPlan,
         screenshot: bytes | None,
     ) -> None:
         if self.recorder is None:
             return
         try:
             self.recorder.record_step(
-                call, result, plan=plan,
+                call,
+                result,
+                plan=plan,
                 screenshot=screenshot if self.record_screenshots else None,
             )
         except Exception as exc:
             logger.error("Could not record agent step (%s)", type(exc).__name__)
 
     async def _replan(
-        self, planner: Planner, state: AgentState, reason: str,
+        self,
+        planner: Planner,
+        state: AgentState,
+        reason: str,
     ) -> bool:
         if state.replans >= self.max_replans:
             await self._emit("recovery", strategy="stop", reason="replan budget exhausted")
@@ -291,9 +319,7 @@ class AgentOrchestrator:
         await self._emit("plan_updated", plan=state.plan.model_dump())
         return True
 
-    async def run(
-        self, task: str, start_url: str, task_id: str | None = None
-    ) -> RunResult:
+    async def run(self, task: str, start_url: str, task_id: str | None = None) -> RunResult:
         """Execute a task, returning a completed, partial, blocked or stopped result."""
         if self._run_task is not None and not self._run_task.done():
             raise RuntimeError("This agent is already running")
@@ -307,7 +333,9 @@ class AgentOrchestrator:
         final = RunResult(task_id=state.task_id, status="failed", error="Task did not start")
         try:
             if self.recorder is not None:
-                self.recorder.start(task, str(getattr(self.provider, "label", type(self.provider).__name__)))
+                self.recorder.start(
+                    task, str(getattr(self.provider, "label", type(self.provider).__name__))
+                )
             await self._emit("started", task=task, start_url=safe_url(start_url))
             await self._emit("agent_started", task=task, start_url=safe_url(start_url))
             if self._cancelled.is_set():
@@ -328,16 +356,24 @@ class AgentOrchestrator:
             initial_result = await self._execute(navigation, initial)
             if not initial_result.success:
                 await self._emit(
-                    "failed", reason="initial_navigation",
+                    "failed",
+                    reason="initial_navigation",
                     message=(initial_result.error_code or "navigation failed"),
                     error_code=initial_result.error_code,
                 )
                 final = RunResult(
                     task_id=state.task_id,
-                    status="blocked" if initial_result.error_code in {
-                        "permission_denied", "permission_required", "policy_denied",
-                        "unsafe_url", "blocked_url", "approval_denied",
-                    } else "failed",
+                    status="blocked"
+                    if initial_result.error_code
+                    in {
+                        "permission_denied",
+                        "permission_required",
+                        "policy_denied",
+                        "unsafe_url",
+                        "blocked_url",
+                        "approval_denied",
+                    }
+                    else "failed",
                     error=f"Initial navigation failed: {initial_result.error_code or 'browser error'}",
                 )
                 return final
@@ -349,7 +385,9 @@ class AgentOrchestrator:
                 state.answer = "Human verification is required. Complete it manually or use another legitimate source."
                 await self._emit("status", message="Human verification required")
                 final = RunResult(
-                    task_id=state.task_id, status="blocked", answer=state.answer,
+                    task_id=state.task_id,
+                    status="blocked",
+                    answer=state.answer,
                     error="Human verification required",
                 )
                 return final
@@ -367,8 +405,11 @@ class AgentOrchestrator:
                     state.answer = "Human verification is required. Complete it manually or use another legitimate source."
                     await self._emit("status", message="Human verification required")
                     final = RunResult(
-                        task_id=state.task_id, status="blocked", answer=state.answer,
-                        steps=state.steps, error="Human verification required",
+                        task_id=state.task_id,
+                        status="blocked",
+                        answer=state.answer,
+                        steps=state.steps,
+                        error="Human verification required",
                     )
                     break
                 memory.observe(observation)
@@ -379,12 +420,17 @@ class AgentOrchestrator:
                     await self._phase(Phase.DECIDE)
                     image = (
                         await self._take_screenshot()
-                        if getattr(self.provider, "send_images", True) else None
+                        if getattr(self.provider, "send_images", True)
+                        else None
                     )
                     try:
                         decision = await self.provider.decide(
-                            task, state.plan, observation,
-                            memory.context_text(), self._specs(), image=image,
+                            task,
+                            state.plan,
+                            observation,
+                            memory.context_text(),
+                            self._specs(),
+                            image=image,
                         )
                         if not isinstance(decision, ModelDecision):
                             decision = ModelDecision.model_validate(decision)
@@ -394,12 +440,16 @@ class AgentOrchestrator:
                         logger.warning("Model decision failed (%s)", type(exc).__name__)
                         decision_failures += 1
                         await self._emit(
-                            "recovery", strategy="reobserve", reason="model_decision_failed",
+                            "recovery",
+                            strategy="reobserve",
+                            reason="model_decision_failed",
                             attempt=decision_failures,
                         )
                         if decision_failures >= self.max_decision_failures:
                             final = RunResult(
-                                task_id=state.task_id, status="failed", steps=state.steps,
+                                task_id=state.task_id,
+                                status="failed",
+                                steps=state.steps,
                                 error=f"Model failed to return a valid action ({type(exc).__name__})",
                             )
                             break
@@ -413,13 +463,17 @@ class AgentOrchestrator:
                     memory.add_facts(decision.facts, observation.url)
                     if decision.answer and not decision.tool_call:
                         answer = decision.answer.strip()
-                        if answer and (observation.text.strip() or observation.elements
-                                       or state.verified_actions > 0):
+                        if answer and (
+                            observation.text.strip()
+                            or observation.elements
+                            or state.verified_actions > 0
+                        ):
                             state.answer = answer
                             Planner.mark_completed(state.plan, decision.completed_step_ids)
                             await self._phase(Phase.COMPLETE)
                             await self._emit(
-                                "completed", answer=answer,
+                                "completed",
+                                answer=answer,
                                 evidence={
                                     "source_url": safe_url(observation.url),
                                     "verified_actions": state.verified_actions,
@@ -427,18 +481,23 @@ class AgentOrchestrator:
                                 },
                             )
                             final = RunResult(
-                                task_id=state.task_id, status="completed",
-                                answer=answer, steps=state.steps,
+                                task_id=state.task_id,
+                                status="completed",
+                                answer=answer,
+                                steps=state.steps,
                             )
                             break
                         await self._emit(
-                            "recovery", strategy="reobserve",
+                            "recovery",
+                            strategy="reobserve",
                             reason="answer lacks observed evidence",
                         )
                         decision_failures += 1
                         if decision_failures >= self.max_decision_failures:
                             final = RunResult(
-                                task_id=state.task_id, status="failed", steps=state.steps,
+                                task_id=state.task_id,
+                                status="failed",
+                                steps=state.steps,
                                 error="Answer lacked observed evidence",
                             )
                             break
@@ -447,12 +506,15 @@ class AgentOrchestrator:
                     if call is None:
                         decision_failures += 1
                         await self._emit(
-                            "recovery", strategy="reobserve",
+                            "recovery",
+                            strategy="reobserve",
                             reason="model supplied neither tool nor answer",
                         )
                         if decision_failures >= self.max_decision_failures:
                             final = RunResult(
-                                task_id=state.task_id, status="failed", steps=state.steps,
+                                task_id=state.task_id,
+                                status="failed",
+                                steps=state.steps,
                                 error="Model supplied neither tool nor answer",
                             )
                             break
@@ -467,7 +529,9 @@ class AgentOrchestrator:
                 if loop_guard.strategy == RecoveryStrategy.REPLAN:
                     if not await self._replan(planner, state, loop_guard.reason):
                         final = RunResult(
-                            task_id=state.task_id, status="partial", steps=state.steps,
+                            task_id=state.task_id,
+                            status="partial",
+                            steps=state.steps,
                             error="Repeated browser actions without progress",
                         )
                         break
@@ -482,25 +546,28 @@ class AgentOrchestrator:
                 if result.success:
                     state.verified_actions += 1
                     if decision is not None:
-                        completed = Planner.mark_completed(
-                            state.plan, decision.completed_step_ids
-                        )
+                        completed = Planner.mark_completed(state.plan, decision.completed_step_ids)
                         if completed:
                             await self._emit(
-                                "plan_updated", plan=state.plan.model_dump(),
+                                "plan_updated",
+                                plan=state.plan.model_dump(),
                                 completed_step_ids=completed,
                             )
 
                 recovery_choice: RecoveryDecision = recovery.after_action(
-                    call, observation, result,
+                    call,
+                    observation,
+                    result,
                     retry_allowed=self._retry_allowed(call.name),
                 )
                 if recovery_choice.strategy == RecoveryStrategy.CONTINUE:
                     continue
                 await self._phase(Phase.RECOVER)
                 await self._emit(
-                    "recovery", strategy=recovery_choice.strategy.value,
-                    reason=recovery_choice.reason, tool=call.name,
+                    "recovery",
+                    strategy=recovery_choice.strategy.value,
+                    reason=recovery_choice.reason,
+                    tool=call.name,
                 )
                 if recovery_choice.strategy == RecoveryStrategy.RETRY:
                     pending_retry = call
@@ -508,35 +575,54 @@ class AgentOrchestrator:
                     recovery.consecutive_failures = 0
                     if not await self._replan(planner, state, recovery_choice.reason):
                         final = RunResult(
-                            task_id=state.task_id, status="partial", steps=state.steps,
+                            task_id=state.task_id,
+                            status="partial",
+                            steps=state.steps,
                             error="Recovery budget exhausted",
                         )
                         break
                 elif recovery_choice.strategy == RecoveryStrategy.STOP:
                     if result.error_code in {"permission_required", "permission_denied"}:
-                        state.answer = "The requested action was not approved; no action was executed."
+                        state.answer = (
+                            "The requested action was not approved; no action was executed."
+                        )
                     final = RunResult(
-                        task_id=state.task_id, status="blocked", answer=state.answer,
+                        task_id=state.task_id,
+                        status="blocked",
+                        answer=state.answer,
                         steps=state.steps,
                         error=recovery_choice.reason,
                     )
                     break
             else:
                 final = RunResult(
-                    task_id=state.task_id, status="partial", steps=state.steps,
+                    task_id=state.task_id,
+                    status="partial",
+                    steps=state.steps,
                     error=f"Reached the {self.max_steps}-action limit",
                 )
         except asyncio.CancelledError:
             final = RunResult(
-                task_id=state.task_id, status="stopped", answer=state.answer,
-                steps=state.steps, error="Cancelled by user",
+                task_id=state.task_id,
+                status="stopped",
+                answer=state.answer,
+                steps=state.steps,
+                error="Cancelled by user",
             )
             await self._emit("stopped", reason="cancelled")
         except Exception as exc:
-            logger.error("Agent run %s failed in %s (%s)", state.task_id, state.phase.value, type(exc).__name__)
+            logger.error(
+                "Agent run %s failed in %s (%s)",
+                state.task_id,
+                state.phase.value,
+                type(exc).__name__,
+            )
             final = RunResult(
-                task_id=state.task_id, status="failed", answer=state.answer,
-                steps=state.steps, error=f"Agent failed ({type(exc).__name__})",
+                task_id=state.task_id,
+                status="failed",
+                answer=state.answer,
+                steps=state.steps,
+                error=f"Agent failed ({type(exc).__name__})",
             )
             await self._emit("agent_error", message=f"Agent failed ({type(exc).__name__})")
         finally:

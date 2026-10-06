@@ -32,9 +32,23 @@ class KeyArgs(ToolArgs):
     @classmethod
     def safe_key(cls, value: str) -> str:
         allowed = {
-            "Enter", "NumpadEnter", "Tab", "Escape", "Backspace", "Delete",
-            "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Home", "End",
-            "PageUp", "PageDown", "Space", "ControlOrMeta+A", "Control+A",
+            "Enter",
+            "NumpadEnter",
+            "Tab",
+            "Escape",
+            "Backspace",
+            "Delete",
+            "ArrowUp",
+            "ArrowDown",
+            "ArrowLeft",
+            "ArrowRight",
+            "Home",
+            "End",
+            "PageUp",
+            "PageDown",
+            "Space",
+            "ControlOrMeta+A",
+            "Control+A",
             "Meta+A",
         }
         if value not in allowed:

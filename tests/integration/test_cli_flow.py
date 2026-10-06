@@ -21,8 +21,11 @@ BROWSER_EXECUTABLE = (
     os.environ.get("FISHER_TEST_BROWSER")
     or os.environ.get("FISHER_EXECUTABLE_PATH")
     or next(
-        (path for name in ("chromium", "chromium-browser", "google-chrome", "chrome")
-         if (path := shutil.which(name))),
+        (
+            path
+            for name in ("chromium", "chromium-browser", "google-chrome", "chrome")
+            if (path := shutil.which(name))
+        ),
         None,
     )
 )
@@ -64,31 +67,39 @@ class CliFlowTests(unittest.TestCase):
         site = ThreadingHTTPServer(("127.0.0.1", 0), partial(_Site, directory=str(FIXTURES)))
         model = ThreadingHTTPServer(("127.0.0.1", 0), _Ollama)
         model.requests = 0  # type: ignore[attr-defined]
-        threads = [
-            Thread(target=server.serve_forever, daemon=True) for server in (site, model)
-        ]
+        threads = [Thread(target=server.serve_forever, daemon=True) for server in (site, model)]
         for thread in threads:
             thread.start()
         try:
             with tempfile.TemporaryDirectory(prefix="fisher-cli-test-") as data_dir:
                 env = os.environ.copy()
-                env.update({
-                    "FISHER_PROVIDER": "ollama",
-                    "FISHER_OLLAMA_BASE_URL": f"http://127.0.0.1:{model.server_port}",
-                    "FISHER_DATA_DIR": data_dir,
-                    "FISHER_ALLOW_PRIVATE_NETWORK": "true",
-                    "FISHER_HEADLESS": "true",
-                    "PYTHONDONTWRITEBYTECODE": "1",
-                })
+                env.update(
+                    {
+                        "FISHER_PROVIDER": "ollama",
+                        "FISHER_OLLAMA_BASE_URL": f"http://127.0.0.1:{model.server_port}",
+                        "FISHER_DATA_DIR": data_dir,
+                        "FISHER_ALLOW_PRIVATE_NETWORK": "true",
+                        "FISHER_HEADLESS": "true",
+                        "PYTHONDONTWRITEBYTECODE": "1",
+                    }
+                )
                 if BROWSER_EXECUTABLE:
                     env["FISHER_EXECUTABLE_PATH"] = BROWSER_EXECUTABLE
                 run = subprocess.run(
                     [
-                        sys.executable, "main.py", "Read the Studio headphones price",
-                        "--provider", "ollama",
-                        "--url", f"http://127.0.0.1:{site.server_port}/product.html",
+                        sys.executable,
+                        "main.py",
+                        "Read the Studio headphones price",
+                        "--provider",
+                        "ollama",
+                        "--url",
+                        f"http://127.0.0.1:{site.server_port}/product.html",
                     ],
-                    cwd=ROOT, env=env, capture_output=True, text=True, timeout=30,
+                    cwd=ROOT,
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
                     check=False,
                 )
                 self.assertEqual(run.returncode, 0, run.stdout + run.stderr)

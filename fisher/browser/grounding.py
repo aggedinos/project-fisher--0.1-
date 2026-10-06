@@ -35,7 +35,7 @@ class ElementGrounder:
         page = self._page
         if page is None or page.is_closed():
             raise StaleElementError("The observed page has closed")
-        marker = page.locator(f'[data-fisher-id={json.dumps(element_id)}]')
+        marker = page.locator(f"[data-fisher-id={json.dumps(element_id)}]")
         try:
             if await marker.count() != 1 or not await marker.is_visible():
                 raise StaleElementError(f"Element {element_id!r} is stale or hidden")
@@ -53,7 +53,7 @@ class ElementGrounder:
         if target.test_id:
             candidates.append(page.get_by_test_id(target.test_id))
         if target.dom_id:
-            candidates.append(page.locator(f'[id={json.dumps(target.dom_id)}]'))
+            candidates.append(page.locator(f"[id={json.dumps(target.dom_id)}]"))
         if info.name and info.role in {"button", "link"}:
             candidates.append(page.get_by_text(info.name, exact=True))
         candidates.append(marker)
@@ -62,9 +62,10 @@ class ElementGrounder:
         # *same* observed element. This avoids a duplicate-label misclick.
         for candidate in candidates:
             try:
-                if await candidate.count() == 1 and await candidate.get_attribute(
-                    "data-fisher-id"
-                ) == element_id:
+                if (
+                    await candidate.count() == 1
+                    and await candidate.get_attribute("data-fisher-id") == element_id
+                ):
                     return candidate
             except Exception:
                 continue

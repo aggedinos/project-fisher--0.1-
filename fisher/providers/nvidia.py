@@ -36,7 +36,10 @@ class NvidiaProvider(Provider):
             f"{self.base_url}/chat/completions",
             {
                 "model": self.model,
-                "messages": [{"role": "system", "content": system}, {"role": "user", "content": content}],
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": content},
+                ],
                 "temperature": self.temperature,
                 "max_tokens": 2048,
                 "stream": False,
@@ -50,7 +53,8 @@ class NvidiaProvider(Provider):
         text = message.get("content") if isinstance(message, dict) else None
         if isinstance(text, list):
             text = "".join(
-                part["text"] for part in text
+                part["text"]
+                for part in text
                 if isinstance(part, dict) and isinstance(part.get("text"), str)
             )
         if not isinstance(text, str) or not text.strip():

@@ -506,7 +506,7 @@ export default function App() {
             <section className="composer-card" aria-label="Start a task">
               <div className="composer-top"><span className="eyebrow">NEW TASK</span><span className="keyboard-hint">Ctrl + Enter to run</span></div>
               <textarea aria-label="Task" placeholder="What would you like Fisher to do?" value={task} onChange={(event: { target: HTMLTextAreaElement }) => setTask(event.target.value)}
-                onKeyDown={(event: KeyboardEvent) => { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); void startTask(); } }} rows={3} />
+                onKeyDown={event => { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); void startTask(); } }} rows={3} />
               <div className="composer-bottom"><div className="composer-url"><Globe2 size={16} /><input aria-label="Starting URL" type="url" placeholder="Starting URL (optional)" value={url} onChange={(event: { target: HTMLInputElement }) => setUrl(event.target.value)} /></div>
                 <div className="composer-actions"><span className="composer-model"><Circle size={9} fill="currentColor" />{providerLabels[settings.provider]}{settings.model ? ` · ${settings.model}` : ''}</span>
                   {isRunning ? <button className="stop-button" onClick={() => void stopTask()} disabled={runState === 'stopping'}><Square size={15} fill="currentColor" /> Stop</button>

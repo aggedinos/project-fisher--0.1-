@@ -40,7 +40,9 @@ _ASSIGNMENT = re.compile(
     r"([^\s,;&]+)"
 )
 _BEARER = re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~+/=-]+")
-_KEY_SHAPES = re.compile(r"\b(?:sk-[A-Za-z0-9_-]{12,}|AIza[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9_]{20,})\b")
+_KEY_SHAPES = re.compile(
+    r"\b(?:sk-[A-Za-z0-9_-]{12,}|AIza[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9_]{20,})\b"
+)
 
 
 def _utc_now() -> str:
@@ -57,10 +59,14 @@ def _plain(value: Any) -> Any:
 
 def _is_input_call(name: str) -> bool:
     name = name.lower()
-    return any(part in name for part in ("fill", "type", "paste", "insert", "input", "write", "enter_text"))
+    return any(
+        part in name for part in ("fill", "type", "paste", "insert", "input", "write", "enter_text")
+    )
 
 
-def _collect_sensitive(value: Any, found: set[str], *, input_args: bool = False, depth: int = 0) -> None:
+def _collect_sensitive(
+    value: Any, found: set[str], *, input_args: bool = False, depth: int = 0
+) -> None:
     """Remember entered values so echoes in tool results can be removed too."""
     if depth > 12:
         return
@@ -110,7 +116,9 @@ def _scrub_text(value: str, known: set[str], *, url: bool = False, structural: b
             parts = urlsplit(value)
             # Remove URL user information and fragments, which often hold tokens.
             netloc = parts.netloc.rsplit("@", 1)[-1]
-            query = urlencode([(key, _REDACTED) for key, _ in parse_qsl(parts.query, keep_blank_values=True)])
+            query = urlencode(
+                [(key, _REDACTED) for key, _ in parse_qsl(parts.query, keep_blank_values=True)]
+            )
             value = urlunsplit((parts.scheme, netloc, parts.path, query, ""))
         except ValueError:
             return "[invalid URL]"
@@ -149,7 +157,9 @@ def _sanitize(
             )
         return output
     if isinstance(value, (list, tuple)):
-        items = [_sanitize(item, known, input_args=input_args, depth=depth + 1) for item in value[:100]]
+        items = [
+            _sanitize(item, known, input_args=input_args, depth=depth + 1) for item in value[:100]
+        ]
         if len(value) > 100:
             items.append(_OMITTED)
         return items
@@ -231,7 +241,11 @@ class SessionRecorder:
             if self._session is not None:
                 raise RuntimeError("This recorder already has a session")
             self.root.mkdir(parents=True, exist_ok=True)
-            existing = [int(match.group(1)) for item in self.root.iterdir() if (match := _ID_PATTERN.fullmatch(item.name))]
+            existing = [
+                int(match.group(1))
+                for item in self.root.iterdir()
+                if (match := _ID_PATTERN.fullmatch(item.name))
+            ]
             number = max(existing, default=0) + 1
             while True:
                 session_id = f"session-{number:06d}"
@@ -266,7 +280,9 @@ class SessionRecorder:
 
     def _save(self) -> None:
         assert self._path is not None and self._session is not None
-        serialized = json.dumps(self._session, ensure_ascii=False, separators=(",", ":"), allow_nan=False).encode("utf-8")
+        serialized = json.dumps(
+            self._session, ensure_ascii=False, separators=(",", ":"), allow_nan=False
+        ).encode("utf-8")
         _atomic_write(self._path, serialized)
 
     def record_event(self, event: AgentEvent | Mapping[str, Any]) -> None:
@@ -309,12 +325,17 @@ class SessionRecorder:
             step = {
                 "index": index,
                 "timestamp": _utc_now(),
-                "url": _sanitize(observation.url, self._known_sensitive, key="url") if observation else None,
+                "url": _sanitize(observation.url, self._known_sensitive, key="url")
+                if observation
+                else None,
                 "observation": _observation_summary(observation, self._known_sensitive),
                 "call": _sanitize(call_data, self._known_sensitive),
                 "result": _sanitize(result_data, self._known_sensitive),
                 "verification": _sanitize(metadata.get("verification"), self._known_sensitive),
-                "confidence": _sanitize(metadata.get("confidence", call.arguments.get("confidence")), self._known_sensitive),
+                "confidence": _sanitize(
+                    metadata.get("confidence", call.arguments.get("confidence")),
+                    self._known_sensitive,
+                ),
                 "plan": _sanitize(plan, self._known_sensitive) if plan is not None else None,
                 "screenshot": screenshot_ref,
             }

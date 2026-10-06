@@ -12,7 +12,8 @@ from fisher.models import Observation, ToolCall, ToolResult
 
 _SECRET_HINT = re.compile(
     r"(api[_ -]?key|access[_ -]?token|password|passcode|secret|authorization|"
-    r"private[_ -]?key|credit[_ -]?card|bearer\s+\S+)", re.IGNORECASE
+    r"private[_ -]?key|credit[_ -]?card|bearer\s+\S+)",
+    re.IGNORECASE,
 )
 
 
@@ -79,9 +80,13 @@ class MemoryManager:
                 step=step,
                 url=url,
                 action=safe_call(call),
-                outcome=("verified" if result.success and result.changed else
-                         "observed" if result.success else
-                         f"failed: {result.error_code or 'unknown'}"),
+                outcome=(
+                    "verified"
+                    if result.success and result.changed
+                    else "observed"
+                    if result.success
+                    else f"failed: {result.error_code or 'unknown'}"
+                ),
                 evidence=evidence,
             )
         )
@@ -92,8 +97,7 @@ class MemoryManager:
             "Recent actions:",
         ]
         lines += [
-            f"- {item.step}: {item.action} at {item.url}; "
-            f"{item.outcome}; {item.evidence}"
+            f"- {item.step}: {item.action} at {item.url}; {item.outcome}; {item.evidence}"
             for item in self.recent
         ]
         if self.facts:

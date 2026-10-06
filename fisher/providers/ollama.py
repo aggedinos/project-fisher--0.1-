@@ -10,7 +10,9 @@ from .base import Provider, ProviderOutputError
 class OllamaProvider(Provider):
     label = "Ollama"
 
-    def __init__(self, model: str, base_url: str = "http://127.0.0.1:11434", **kwargs: object) -> None:
+    def __init__(
+        self, model: str, base_url: str = "http://127.0.0.1:11434", **kwargs: object
+    ) -> None:
         super().__init__(model, **kwargs)
         self.base_url = base_url.rstrip("/")
 

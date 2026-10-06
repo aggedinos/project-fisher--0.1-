@@ -20,8 +20,11 @@ def _safe_call(call: ToolCall) -> ToolCall:
     return ToolCall(
         name=call.name,
         arguments={
-            key: safe_url(value) if key == "url" and isinstance(value, str) else (
-                value if key in {"element_id", "tab_id", "key", "delta_y", "x", "y"}
+            key: safe_url(value)
+            if key == "url" and isinstance(value, str)
+            else (
+                value
+                if key in {"element_id", "tab_id", "key", "delta_y", "x", "y"}
                 else "[redacted]"
             )
             for key, value in call.arguments.items()
@@ -46,9 +49,7 @@ def _safe_error(exc: Exception, call: ToolCall) -> str:
 
 
 class ToolRegistry:
-    def __init__(
-        self, browser: BrowserController, policy: SecurityPolicy | None = None
-    ) -> None:
+    def __init__(self, browser: BrowserController, policy: SecurityPolicy | None = None) -> None:
         self.browser = browser
         self.policy = policy or browser.policy
 
@@ -65,17 +66,22 @@ class ToolRegistry:
         definition = DEFINITIONS.get(call.name)
         if definition is None:
             return ToolResult(
-                call=safe_call, success=False, message="Unknown tool",
-                error_code="unknown_tool", retryable=False,
+                call=safe_call,
+                success=False,
+                message="Unknown tool",
+                error_code="unknown_tool",
+                retryable=False,
             )
         try:
             arguments = definition.arguments.model_validate(call.arguments).model_dump()
         except ValidationError as exc:
             fields = ", ".join(".".join(map(str, error["loc"])) for error in exc.errors())
             return ToolResult(
-                call=safe_call, success=False,
+                call=safe_call,
+                success=False,
                 message=f"Invalid arguments for {call.name}: {fields}",
-                error_code="invalid_arguments", retryable=False,
+                error_code="invalid_arguments",
+                retryable=False,
             )
         validated_call = ToolCall(name=call.name, arguments=arguments)
         before: Observation | None = self.browser.last_observation
@@ -84,13 +90,19 @@ class ToolRegistry:
                 before = await self.browser.observe()
             assessment = self.policy.classify(validated_call, before)
             if not await permitted(
-                mode=PermissionMode(mode), call=validated_call,
-                risk=assessment.level, reason=assessment.reason, approve=approve,
+                mode=PermissionMode(mode),
+                call=validated_call,
+                risk=assessment.level,
+                reason=assessment.reason,
+                approve=approve,
             ):
                 return ToolResult(
-                    call=safe_call, success=False, before_state=before,
+                    call=safe_call,
+                    success=False,
+                    before_state=before,
                     message=f"Permission required: {assessment.reason}",
-                    error_code="permission_required", retryable=False,
+                    error_code="permission_required",
+                    retryable=False,
                 )
             data = await asyncio.wait_for(
                 invoke_browser_tool(self.browser, call.name, arguments),
@@ -110,9 +122,9 @@ class ToolRegistry:
                 call=safe_call,
                 success=success,
                 changed=changed,
-                message="Verified change" if success and changed else (
-                    "Page observed" if success else "Action produced no verified change"
-                ),
+                message="Verified change"
+                if success and changed
+                else ("Page observed" if success else "Action produced no verified change"),
                 evidence=evidence,
                 error_code=None if success else "verification_failed",
                 retryable=not success and definition.retryable,
@@ -123,19 +135,28 @@ class ToolRegistry:
         except (SecurityError, StaleElementError) as exc:
             code = "blocked_url" if isinstance(exc, SecurityError) else "stale_element"
             return ToolResult(
-                call=safe_call, success=False, message=str(exc),
-                error_code=code, retryable=code == "stale_element",
+                call=safe_call,
+                success=False,
+                message=str(exc),
+                error_code=code,
+                retryable=code == "stale_element",
                 before_state=before,
             )
         except asyncio.TimeoutError:
             return ToolResult(
-                call=safe_call, success=False, message="Tool timed out",
-                error_code="timeout", retryable=definition.retryable,
+                call=safe_call,
+                success=False,
+                message="Tool timed out",
+                error_code="timeout",
+                retryable=definition.retryable,
                 before_state=before,
             )
         except (ValueError, PlaywrightError, RuntimeError) as exc:
             return ToolResult(
-                call=safe_call, success=False, message=_safe_error(exc, call),
-                error_code="browser_error", retryable=definition.retryable,
+                call=safe_call,
+                success=False,
+                message=_safe_error(exc, call),
+                error_code="browser_error",
+                retryable=definition.retryable,
                 before_state=before,
             )
