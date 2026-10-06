@@ -1,152 +1,184 @@
-"""Entry point — parse CLI args, load env, and run the browser agent.
+"""Project Fisher 0.2 command line and local control center entry point."""
 
-Backends:  gemini (cloud, API key) | ollama (local, no key)
-Modes:     default automatic | --supervised (y/n/s/r) | --replay <session.json>
-           | --gui (desktop app)
-"""
+from __future__ import annotations
 
 import argparse
 import asyncio
+import logging
 import os
-import sys
-from asyncio import CancelledError
+import threading
+import time
+from pathlib import Path
+from typing import Any
 
-from dotenv import load_dotenv
+import uvicorn
 
-import paths  
-from actions import Action
-from agent import BrowserAgent
-from config import config
-from llm import build_provider
-
-
-def build_parser() -> argparse.ArgumentParser:
-    """Return the configured argument parser."""
-    parser = argparse.ArgumentParser(
-        description="Browser automation agent (Gemini Cloud Engine)",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  python main.py "Find the top story on Hacker News" --url https://news.ycombinator.com
-  python main.py "Research a topic" --thinking-level pro
-  python main.py --replay sessions/session_20250515_143022.json
-  python main.py --gui
-        """,
-    )
-    parser.add_argument("task", nargs="?", help="Natural-language task")
-    parser.add_argument(
-        "--url", default="https://duckduckgo.com", metavar="URL",
-        help="Starting URL (default: https://duckduckgo.com)",
-    )
-    parser.add_argument(
-        "--thinking-level", choices=["fast", "thinking", "pro"],
-        default=config.thinking_level,
-        help=f"Gemini Thinking Level: fast, thinking, pro (default: {config.thinking_level})",
-    )
-    parser.add_argument(
-        "--click-mode", choices=["vision", "text"], default=config.click_mode,
-        help="Clicking strategy: vision = x,y coordinates (default); text",
-    )
-    parser.add_argument(
-        "--real-chrome", action="store_true",
-        help="Launch with the user's real Chrome profile instead of Chromium",
-    )
-    parser.add_argument(
-        "--chrome-profile", default=config.chrome_profile, metavar="NAME",
-        help='Chrome profile directory name',
-    )
-    parser.add_argument(
-        "--supervised", action="store_true",
-        help="Ask y/n/s/r before every action",
-    )
-    parser.add_argument(
-        "--replay", metavar="FILE",
-        help="Replay a saved session JSON visually and exit",
-    )
-    parser.add_argument(
-        "--gui", action="store_true",
-        help="Launch the desktop GUI instead of the CLI",
-    )
-    return parser
+from fisher.api import create_api
+from fisher.app import FisherApplication
+from fisher.config.settings import load_settings
+from fisher.models import AgentEvent, PermissionMode, PermissionRequest
+from fisher.providers.base import ProviderError
+from fisher.sessions.recorder import SessionRecorder
 
 
-def cli_approve(action: Action, step: int, screenshot_path: str) -> str:
-    """Supervised-mode prompt (Improvement 9). Returns y / n / s / r."""
-    print(
-        f"\nStep {step}: [{action.action_type.upper()}] — {action.reason} "
-        f"(confidence: {action.confidence}%)"
+def parser() -> argparse.ArgumentParser:
+    command = argparse.ArgumentParser(description="Project Fisher 0.2 browser agent")
+    command.add_argument("task", nargs="?", help="Task to perform")
+    command.add_argument("--url", default="https://duckduckgo.com", help="Starting HTTP(S) URL")
+    command.add_argument("--provider", choices=("gemini", "ollama", "nvidia"))
+    command.add_argument("--model", help="Model name for the selected provider")
+    command.add_argument(
+        "--permission-mode", choices=tuple(mode.value for mode in PermissionMode)
     )
-    print(f"Screenshot saved to {screenshot_path}")
+    command.add_argument("--profile", choices=("temporary", "persistent"))
+    display = command.add_mutually_exclusive_group()
+    display.add_argument("--headless", dest="headless", action="store_true")
+    display.add_argument("--headed", dest="headless", action="store_false")
+    command.set_defaults(headless=None)
+    command.add_argument("--browser-executable", help="Optional Chromium executable path")
+    command.add_argument("--serve", action="store_true", help="Serve the web control center locally")
+    command.add_argument("--gui", action="store_true", help="Open the desktop control center")
+    command.add_argument("--port", type=int, default=8000, help="Local GUI port (default: 8000)")
+    command.add_argument("--replay", metavar="SESSION_ID", help="Read-only session replay")
+    command.add_argument("--verbose", action="store_true", help="Enable detailed local logging")
+    return command
+
+
+def _print_event(event: AgentEvent) -> None:
+    if event.type == "status":
+        message = event.data.get("message")
+        if message:
+            print(message, flush=True)
+    elif event.type == "tool_started":
+        call = event.data.get("call", {})
+        print(f"Using {call.get('name', 'tool')}", flush=True)
+    elif event.type == "verification_result":
+        print("Verified change" if event.data.get("changed") else "No change detected", flush=True)
+    elif event.type == "agent_error":
+        print(f"Agent error: {event.data.get('message', 'Unknown error')}", flush=True)
+
+
+async def _approve(request: PermissionRequest) -> bool:
+    prompt = f"Allow {request.call.name} ({request.risk.value}: {request.reason})? [y/N] "
     try:
-        choice = input("Continue? [y/n/s(skip)/r(replan)]: ").strip().lower()
+        answer = await asyncio.to_thread(input, prompt)
     except (EOFError, KeyboardInterrupt):
-        return "n"
-    return choice[:1] if choice else "y"
+        return False
+    return answer.strip().lower() in {"y", "yes"}
 
 
-async def run_cli(args) -> None:
-    config.use_real_chrome = args.real_chrome
-    config.chrome_profile = args.chrome_profile
+async def _run_cli(args: argparse.Namespace) -> int:
+    service = FisherApplication(load_settings())
+    options: dict[str, Any] = {
+        "provider": args.provider,
+        "model": args.model,
+        "permission_mode": args.permission_mode,
+        "profile": args.profile,
+        "headless": args.headless,
+        "executable_path": args.browser_executable,
+    }
+    try:
+        result = await service.run_once(
+            args.task,
+            args.url,
+            on_event=_print_event,
+            approve=_approve,
+            **options,
+        )
+    except KeyboardInterrupt:
+        print("Stopped")
+        return 130
+    except Exception as exc:
+        message = str(exc) if isinstance(exc, ProviderError) else f"Task failed ({type(exc).__name__})"
+        print(f"Could not run task: {message}")
+        return 1
+    if result.answer:
+        print(result.answer)
+    if result.error:
+        print(result.error)
+    return 0 if result.status == "completed" else 1
 
-    config.thinking_level = args.thinking_level
-    gemini_model = config.gemini_model
+
+def _show_replay(session_id: str) -> int:
+    settings = load_settings()
+    recorder = SessionRecorder(root=Path(settings.data_dir) / "sessions")
+    try:
+        session = recorder.get_session(session_id)
+    except (FileNotFoundError, ValueError):
+        print("Session not found")
+        return 1
+    print(f"Task: {session.get('task', '')}")
+    print(f"Status: {session.get('status', '')}")
+    for event in session.get("events", []):
+        kind = event.get("type", "")
+        data = event.get("data", {})
+        if kind == "status":
+            print(data.get("message", ""))
+        elif kind in {"tool_started", "tool_finished", "agent_finished", "agent_error"}:
+            print(kind.replace("_", " "))
+    return 0
+
+
+def _serve(port: int, *, desktop: bool) -> int:
+    if not 1 <= port <= 65535:
+        print("Port must be between 1 and 65535")
+        return 2
+    web_index = Path(__file__).resolve().parent / "web" / "index.html"
+    if not web_index.is_file():
+        print("Frontend is not built. Run npm run build first.")
+        return 1
+    url = f"http://127.0.0.1:{port}"
+    app = create_api()
+    server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="info"))
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    for _ in range(100):
+        if server.started:
+            break
+        if not thread.is_alive():
+            print("Could not start the local GUI server")
+            return 1
+        time.sleep(0.1)
+    if not server.started:
+        print("Timed out starting the local GUI server")
+        return 1
+    print(f"Project Fisher control center: {url}")
 
     try:
-        provider = build_provider(
-            provider="gemini",
-            temperature=config.temperature,
-            gemini_model=gemini_model,
-        )
-    except ValueError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
-        sys.exit(1)
+        if not desktop:
+            thread.join()
+            return 0
+        if os.name == "nt" or os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"):
+            import webview
 
-    print(f"Task     : {args.task}")
-    print(f"Start    : {args.url}")
-    print(f"Level    : {config.thinking_level.upper()} ({provider.model})")
-    print(f"Mode     : {'SUPERVISED' if args.supervised else 'automatic'}")
-    print(f"Clicking : {args.click_mode}")
-    if args.real_chrome:
-        print(f"Browser  : real Chrome profile ({config.chrome_profile})")
-    else:
-        print("Browser  : Chromium (isolated)")
-    print()
-
-    agent = BrowserAgent(provider=provider)
-    try:
-        result = await agent.run(
-            task=args.task,
-            start_url=args.url,
-            approve=cli_approve if args.supervised else None,
-            supervised=args.supervised,
-            click_mode=args.click_mode,
-        )
-        print(f"\nResult: {result}")
-    except (KeyboardInterrupt, CancelledError):
-        print("\n[Interrupted by user]")
+            webview.create_window("Project Fisher", url=url, width=1400, height=900)
+            webview.start()
+        else:
+            print(f"No desktop display detected. Open {url} in a local browser.")
+            thread.join()
+    except ImportError:
+        print(f"PyWebview is unavailable. Open {url} in a local browser.")
+        thread.join()
+    finally:
+        server.should_exit = True
+        thread.join(timeout=10)
+    return 0
 
 
-def main() -> None:
-    load_dotenv(paths.env_file())
-    args = build_parser().parse_args()
-
-    if args.gui:
-        from webgui import launch
-
-        launch()
-        return
-
+def main() -> int:
+    args = parser().parse_args()
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
     if args.replay:
-        from session import replay
-
-        asyncio.run(replay(args.replay))
-        return
-
+        return _show_replay(args.replay)
+    if args.serve or args.gui:
+        return _serve(args.port, desktop=args.gui)
     if not args.task:
-        build_parser().error("a task is required (or pass --gui / --replay)")
-
-    asyncio.run(run_cli(args))
+        parser().error("a task is required (or use --gui, --serve, or --replay)")
+    return asyncio.run(_run_cli(args))
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

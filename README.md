@@ -1,108 +1,143 @@
-# project-fisher--0.1-
+# Project Fisher 0.2
 
-# Autonomous Browser Agent
+Project Fisher is a local browser agent. Give it a task, choose Gemini, Ollama, or NVIDIA, and watch it inspect pages and operate Playwright browser tools. Its React control center shows the plan, current action, browser preview, permission requests, and recorded sessions. The same agent runs from the CLI.
 
-![Python Version](https://img.shields.io/badge/python-3.10%2B-blue)
-![Node Version](https://img.shields.io/badge/node-18%2B-green)
-![License](https://img.shields.io/badge/license-MIT-blue)
+Fisher treats page text as untrusted data. A model selects a named, typed tool; Fisher validates its arguments and permissions, executes it, and checks whether the page changed. It stops after bounded retries and reports blocked or partial work instead of looping indefinitely.
 
-An AI-powered browser automation agent that can navigate, click, type, and extract data from any website autonomously. Powered by Google Gemini and built with Playwright and React.
+## Requirements
 
-## 🌟 Features
+- Python 3.11 or newer
+- Node.js 20.19 or newer on the 20.x line, or 22.12 or newer, for building the UI
+- Chromium installed through Playwright, or a compatible local Chromium executable
+- A Gemini or NVIDIA API key for those cloud providers; Ollama needs a running local server instead
+- A graphical desktop for the native PyWebview window. The local web control center also works in a browser.
 
-- **Autonomous Navigation**: Provide a natural language task and watch the agent navigate, click, and read.
-- **Three AI Tiers**: 
-  - `fast`: Low latency for simpler tasks
-  - `thinking`: Advanced reasoning for complex navigation
-  - `pro`: Ultimate capacity for deep multi-step workflows
-- **Multiple Providers**: Support for Gemini (cloud), Ollama (local), and NVIDIA (cloud).
-- **Desktop GUI**: A beautiful React-based desktop app via PyWebview to monitor and intervene during sessions.
-- **CLI Mode**: Run tasks directly from the terminal for automation workflows.
-- **Persistent Profiles**: Use your real Chrome profile to maintain logins and session states across runs.
-- **Session Replay**: Record sessions and replay them visually for debugging or demonstration.
+## Install
 
-## 🚀 Quick Start
+From the repository root on Windows PowerShell:
 
-**Prerequisites:** Python 3.10+, Node.js 18+, and a [Gemini API key](https://aistudio.google.com/apikey).
-
-1. Clone the repository.
-2. Run `setup\install.bat` to install all Python and Node.js dependencies.
-3. Copy `setup\.env.example` to `.env` in the root folder and add your `GEMINI_API_KEY`.
-4. Run `setup\start.bat` to launch the Desktop GUI application.
-
-## 🛠️ Manual Installation
-
-If you prefer to install manually or are not on Windows:
-
-```bash
-# 1. Install Python requirements
-pip install -r requirements.txt
-
-# 2. Install Playwright browsers
-playwright install chromium
-
-# 3. Install Node.js dependencies
-npm install
-
-# 4. Build the React frontend
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r .\requirements.txt
+.\.venv\Scripts\python.exe -m playwright install chromium
+npm ci
 npm run build
-
-# 5. Set up your API key
-cp setup/.env.example .env
-# Edit .env and add GEMINI_API_KEY=your_api_key_here
-
-# 6. Launch the application
-python main.py --gui
+.\run_gui.bat
 ```
 
-## 💻 CLI Usage
-
-You can run the agent directly from the command line:
+On Linux or macOS:
 
 ```bash
-# Run a simple search task
-python main.py "Find the top story on Hacker News" --url https://news.ycombinator.com
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m playwright install chromium
+npm ci
+npm run build
+```
 
-# Use the 'pro' thinking level for a complex research task
-python main.py "Research the latest advancements in quantum computing" --thinking-level pro
+If Playwright's Chromium download is unavailable but Chromium is installed locally, set `FISHER_EXECUTABLE_PATH` or pass `--browser-executable` to the CLI. Use a Chromium version compatible with the installed Playwright release.
 
-# Replay a previously recorded session
-python main.py --replay sessions/session_20250515_143022.json
+Copy [`.env.example`](.env.example) to an untracked `.env`, then set the key for the provider you use. Process environment variables take precedence over `.env` and saved control center settings. Fisher never creates or writes a credentials file.
 
-# Launch the desktop GUI
+```dotenv
+GEMINI_API_KEY=your-local-key
+# Or use NVIDIA_API_KEY=...
+# Or select FISHER_PROVIDER=ollama with no API key
+```
+
+The example above is a template; keep real keys out of version control. The runtime keeps sessions, settings, and its own persistent browser profile in a per-user data directory. Override it with `FISHER_DATA_DIR` if needed.
+
+## Run the control center
+
+```bash
 python main.py --gui
 ```
 
-### CLI Options
+On Windows, `run_gui.bat` runs the command from its own directory. On a desktop, `--gui` opens a PyWebview window. Without a desktop display, it serves the same UI at `http://127.0.0.1:8000` for a local browser. `python main.py --serve` serves it without opening a native window. The server binds to loopback only.
 
-```text
-positional arguments:
-  task                  Natural-language task
+Enter a task and optional starting URL, then choose Run. The right panel shows the plan, action, and event history. Stop cancels the task. When a consequential action needs approval, the dialog offers Approve and Decline. Settings select the provider, model, permission mode, browser profile, and headless mode; no API key is sent back to the UI.
 
-options:
-  -h, --help            show this help message and exit
-  --url URL             Starting URL (default: https://duckduckgo.com)
-  --thinking-level {fast,thinking,pro}
-                        Gemini Thinking Level (default: fast)
-  --click-mode {vision,text}
-                        Clicking strategy (default: vision)
-  --real-chrome         Launch with the user's real Chrome profile instead of Chromium
-  --chrome-profile NAME Chrome profile directory name
-  --supervised          Ask y/n/s/r before every action
-  --replay FILE         Replay a saved session JSON visually and exit
-  --gui                 Launch the desktop GUI instead of the CLI
+## CLI
+
+```bash
+python main.py "Find the Python documentation" --provider gemini --url https://www.python.org
+python main.py "Summarize this page" --provider ollama --model llama3.2-vision --url https://example.com
+python main.py "Inspect this page" --provider nvidia --permission-mode supervised --headed
 ```
 
-## 🧠 How It Works
+Useful options: `--url`, `--provider`, `--model`, `--permission-mode`, `--profile`, `--headless` or `--headed`, `--browser-executable`, `--replay`, `--gui`, and `--serve`. Run `python main.py --help` for the complete list.
 
-- **Playwright**: Handles browser automation and DOM manipulation.
-- **React + Vite**: Powers the interactive frontend user interface.
-- **PyWebview**: Bridges the Python backend with the React frontend to create a seamless desktop application.
-- **Google Gemini**: Interprets visual (screenshots) and textual (DOM) information to decide the next action.
+CLI and GUI use the same browser controller, tool registry, providers, planner, verifier, and session recorder. In a terminal, permission requests require an explicit `y`; EOF or an empty answer declines.
 
-## ⚠️ Troubleshooting
+### Ollama
 
-- **"pywebview bridge not available"**: Ensure you run the application with the `--gui` flag (`python main.py --gui`).
-- **"GEMINI_API_KEY is not set"**: Make sure you have created a `.env` file in the project root containing your API key.
-- **Browser doesn't launch**: You may need to manually install the Chromium browser for Playwright using `playwright install chromium`.
-- **Frontend build errors**: Ensure Node.js 18+ is installed. Run `npm install` followed by `npm run build`.
+Install and start [Ollama](https://ollama.com/), then pull a vision capable model such as `llama3.2-vision`:
+
+```bash
+ollama pull llama3.2-vision
+python main.py "Describe the current page" --provider ollama --model llama3.2-vision
+```
+
+The default Ollama endpoint is `http://127.0.0.1:11434`; change it with `FISHER_OLLAMA_BASE_URL`. Fisher does not start or install Ollama.
+
+## Permissions and browser safety
+
+| Mode | Routine actions | Medium risk actions | High risk actions |
+| --- | --- | --- | --- |
+| `auto` | automatic | automatic | ask |
+| `safe` (default) | automatic | ask | ask |
+| `supervised` | ask for meaningful actions | ask | ask |
+
+Reading a page never needs approval. High risk actions include consequential form submission, purchases, deletion, publishing, credential entry, and uncertain coordinate clicks. Downloads are disabled in the browser context. CAPTCHA and human verification are left to the user; Fisher does not solve or bypass them.
+
+Fisher accepts HTTP(S) navigation and blocks localhost and private network browser destinations by default. For a trusted local fixture, set `FISHER_ALLOW_PRIVATE_NETWORK=true` explicitly. This setting changes browser navigation policy, not the Ollama connection. Fisher uses its own temporary browser or Fisher-owned persistent profile; it never kills Chrome processes or opens your regular Chrome profile.
+
+Webpage content is labeled untrusted in model prompts and cannot grant permission or change Fisher's policy. Avoid placing secrets in task text or ordinary form fields. Session files redact entered values and known credential patterns. Observed password, payment, and verification fields are covered in browser previews and model screenshots; session screenshots are disabled by default and stored separately when enabled.
+
+## Sessions and replay
+
+Runs are recorded under the user data directory's `sessions/` folder. Each session has a compact `session.json` and may have separate screenshot files. Select Sessions in the control center to replay the event history, or run:
+
+```bash
+python main.py --replay session-000001
+```
+
+Replay is read only; it never repeats clicks, submissions, or other browser actions.
+
+## Architecture
+
+- `fisher/browser`: Playwright lifecycle, tabs, compact page perception, short-lived semantic element IDs, JPEG preview.
+- `fisher/tools` and `fisher/security`: validated tool schemas, URL and risk policy, permission gate, timeouts, structured results.
+- `fisher/providers`: one asynchronous interface for Gemini, Ollama, and NVIDIA.
+- `fisher/agent`: planning, bounded memory, observe → act → verify loop, recovery, cancellation.
+- `fisher/sessions`: sanitized recording and read-only replay.
+- `fisher/app.py` and `fisher/api.py`: shared application service and loopback UI contract.
+- `frontend/`: React, TypeScript, and Vite source. `npm run build` emits `web/`.
+
+## Development and tests
+
+```bash
+python -m pip install -r requirements-dev.txt
+python -m pytest
+python -m unittest discover -s tests/unit -p 'test_*.py'
+python -m unittest discover -s tests/integration -p 'test_*.py'
+ruff check fisher main.py tests
+ruff format fisher main.py tests
+npm run lint
+npm run build
+```
+
+The browser integration suite serves deterministic local pages and uses Chromium. It uses `FISHER_TEST_BROWSER`, then `FISHER_EXECUTABLE_PATH`, then a Chromium executable on `PATH`, and finally Playwright's bundled browser. The tests explicitly allow their local fixture addresses.
+
+## Troubleshooting
+
+- **Browser launch fails:** run `python -m playwright install chromium`, or set `FISHER_EXECUTABLE_PATH` to a compatible Chromium executable.
+- **Cloud provider unavailable:** configure `GEMINI_API_KEY` or `NVIDIA_API_KEY` in your private environment. For Ollama, verify its local server and model are running.
+- **UI missing:** run `npm ci && npm run build` from the repository root.
+- **Build cannot find `/src/main.tsx`:** you have the older 0.1 source. Use the 0.2 checkout, which contains `frontend/main.tsx`, before running `npm ci` and `npm run build`.
+- **A task is blocked:** check the permission dialog, URL policy, or event log. A failed interaction is re-observed and retried only within its configured budget.
+- **No desktop display:** use `python main.py --serve` and open the local loopback URL in a browser.
+
+## License
+
+Project Fisher is covered by the [Project Fisher Proprietary License](LICENSE), not an open source or MIT license. Read the license before using or distributing the software.

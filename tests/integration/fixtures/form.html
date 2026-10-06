@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>Test order form</title></head>
+  <body>
+    <h1>Order form</h1>
+    <form id="order-form">
+      <p><label for="customer-name">Full name</label> <input id="customer-name" name="name" required></p>
+      <p><label for="customer-email">Email address</label> <input id="customer-email" name="email" type="email" required></p>
+      <p><label for="delivery-note">Delivery note</label> <textarea id="delivery-note" name="note"></textarea></p>
+      <p><label for="card-number">Card number</label> <input id="card-number" name="card-number" autocomplete="cc-number"></p>
+      <button id="place-order" type="submit">Place order</button>
+    </form>
+    <p id="receipt" aria-live="polite">No order submitted</p>
+    <script>
+      document.querySelector('#order-form').addEventListener('submit', event => {
+        event.preventDefault();
+        document.querySelector('#receipt').textContent = 'Order submitted for ' + document.querySelector('#customer-name').value;
+      });
+    </script>
+  </body>
+</html>

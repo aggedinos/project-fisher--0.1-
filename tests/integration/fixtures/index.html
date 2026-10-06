@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>Fisher test shop</title></head>
+  <body>
+    <h1>Fisher test shop</h1>
+    <form id="search-form" role="search">
+      <label for="query">Product search</label>
+      <input id="query" name="query" type="search" autocomplete="off">
+      <button type="button" id="search-button">Search products</button>
+    </form>
+    <p id="search-status" aria-live="polite">Ready to search</p>
+    <div id="results"></div>
+
+    <p><a href="product.html" id="catalog-link">Browse featured product</a></p>
+    <p><a href="form.html">Order form</a></p>
+    <p><a href="second.html" target="_blank" rel="noopener" id="new-tab-link">Open information in new tab</a></p>
+    <button type="button" id="no-op">No-op control</button>
+
+    <section aria-label="Changing controls">
+      <button type="button" id="refresh-options">Refresh options</button>
+      <div id="choice"><button type="button" id="old-choice">Continue</button></div>
+      <p id="choice-status" aria-live="polite">No choice selected</p>
+    </section>
+    <div style="height: 1400px" aria-hidden="true"></div>
+    <p>End of shop page</p>
+
+    <script>
+      const search = () => {
+        const query = document.querySelector('#query').value.trim().toLowerCase();
+        const status = document.querySelector('#search-status');
+        const results = document.querySelector('#results');
+        if (query.includes('headphones')) {
+          status.textContent = 'One result for headphones';
+          results.innerHTML = '<article><h2>Studio headphones</h2><p>$79.95</p><a href="product.html">Open Studio headphones</a></article>';
+        } else {
+          status.textContent = 'No products found';
+          results.textContent = '';
+        }
+      };
+      document.querySelector('#search-button').addEventListener('click', search);
+      document.querySelector('#search-form').addEventListener('submit', event => { event.preventDefault(); search(); });
+      document.querySelector('#old-choice').addEventListener('click', () => { document.querySelector('#choice-status').textContent = 'Old choice selected'; });
+      document.querySelector('#refresh-options').addEventListener('click', () => {
+        document.querySelector('#choice').innerHTML = '<button type="button" id="new-choice">Continue</button>';
+        document.querySelector('#choice-status').textContent = 'Options refreshed';
+        document.querySelector('#new-choice').addEventListener('click', () => {
+          document.querySelector('#choice-status').textContent = 'New choice selected';
+        });
+      });
+    </script>
+  </body>
+</html>

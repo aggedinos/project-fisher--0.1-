@@ -1,4 +1,9 @@
 @echo off
-cd /d "D:\-Visual-Studio-Code-\Project Fisher\Project-Fisher"
-python main.py --gui
-pause
+setlocal
+cd /d "%~dp0"
+if exist ".venv\Scripts\python.exe" (
+  ".venv\Scripts\python.exe" main.py --gui %*
+) else (
+  py -3 main.py --gui %*
+)
+if errorlevel 1 pause
