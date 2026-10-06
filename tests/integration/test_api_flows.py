@@ -326,21 +326,38 @@ class ApiFlowTests(IsolatedAsyncioTestCase):
         self.assertEqual(malformed.status_code, 403)
 
     async def test_startup_error_reports_safe_message(self) -> None:
-        with patch("fisher.providers.build_provider", side_effect=RuntimeError("token=secret123")):
+        with (
+            patch("fisher.providers.build_provider", side_effect=RuntimeError("token=secret123")),
+            self.assertLogs("fisher.app", level="ERROR") as logs,
+        ):
             task_id = await self._start("Read page", "product.html")
             runtime = self.service.get_task(task_id)
             await asyncio.wait_for(runtime.done.wait(), timeout=5)
             self.assertEqual(runtime.result.status, "error")
             self.assertNotIn("secret123", json.dumps(runtime.result.model_dump()))
             self.assertTrue(any(event.type == "agent_finished" for _, event in runtime.events))
-        with patch(
-            "fisher.providers.build_provider",
-            side_effect=ProviderError("GEMINI_API_KEY is required"),
+            self.assertNotIn("secret123", "\n".join(logs.output))
+        with (
+            patch(
+                "fisher.providers.build_provider",
+                side_effect=ProviderError("GEMINI_API_KEY is required"),
+            ),
+            self.assertLogs("fisher.app", level="ERROR") as logs,
         ):
             task_id = await self._start("Read page", "product.html")
             runtime = self.service.get_task(task_id)
             await asyncio.wait_for(runtime.done.wait(), timeout=5)
             self.assertIn("GEMINI_API_KEY is required", runtime.result.error)
+            self.assertIn("GEMINI_API_KEY is required", "\n".join(logs.output))
+
+    async def test_missing_nvidia_key_is_rejected_before_task_starts(self) -> None:
+        self.service.update_settings({"provider": "nvidia"})
+        response = await self.client.post(
+            "/api/tasks", json={"task": "Find NVIDIA stock", "url": f"{self.site_url}/product.html"}
+        )
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("NVIDIA_API_KEY is required", response.json()["detail"])
+        self.assertIsNone(self.service.status()["task_id"])
 
     async def test_built_control_center_runs_and_stops_a_task(self) -> None:
         self.provider = _WaitingProvider()
@@ -363,6 +380,24 @@ class ApiFlowTests(IsolatedAsyncioTestCase):
                 await asyncio.wait_for(self.provider.entered.wait(), timeout=10)
                 await page.get_by_role("button", name="Stop", exact=True).click()
                 await page.get_by_text("Stopped", exact=True).first.wait_for(timeout=10_000)
+            finally:
+                await browser.close()
+
+    async def test_control_center_shows_missing_nvidia_key_in_preview(self) -> None:
+        self.service.update_settings({"provider": "nvidia"})
+        async with async_playwright() as playwright:
+            browser = await playwright.chromium.launch(
+                headless=True, executable_path=BROWSER_EXECUTABLE
+            )
+            try:
+                page = await browser.new_page()
+                await page.goto(str(self.client.base_url), wait_until="networkidle")
+                self.assertIn("NVIDIA", await page.locator(".composer-model").inner_text())
+                await page.get_by_role("textbox", name="Task", exact=True).fill("Find NVIDIA stock")
+                await page.get_by_role("button", name="Run task").click()
+                await page.locator(
+                    ".browser-placeholder p", has_text="NVIDIA_API_KEY is required"
+                ).wait_for(timeout=10_000)
             finally:
                 await browser.close()
 

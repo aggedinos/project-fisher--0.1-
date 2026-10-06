@@ -192,6 +192,13 @@ class FisherApplication:
             settings = self.settings.with_overrides(
                 **{key: value for key, value in overrides.items() if value is not None}
             )
+            required_key = {"gemini": "GEMINI_API_KEY", "nvidia": "NVIDIA_API_KEY"}.get(
+                settings.provider
+            )
+            if required_key and not settings.api_key_for_provider():
+                raise ValueError(
+                    f"{required_key} is required. Add it to your local .env and restart Fisher."
+                )
             runtime = TaskRuntime(str(uuid4()), task, url)
             self._tasks[runtime.id] = runtime
             self._current_id = runtime.id
@@ -261,12 +268,12 @@ class FisherApplication:
                 )
             )
         except Exception as exc:
-            logger.error("Task %s failed (%s)", runtime.id, type(exc).__name__)
             message = (
                 str(exc)
                 if isinstance(exc, ProviderError)
                 else f"Task failed ({type(exc).__name__})"
             )
+            logger.error("Task %s failed (%s): %s", runtime.id, type(exc).__name__, message)
             runtime.result = RunResult(task_id=runtime.id, status="error", error=message)
             runtime.publish(
                 AgentEvent(type="agent_error", task_id=runtime.id, data={"message": message})
